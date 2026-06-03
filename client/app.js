@@ -100,8 +100,8 @@ class GameApp {
     this.els.colorBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
         this.els.colorBtns.forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
-        this.state.localColor = e.target.dataset.color;
+        e.currentTarget.classList.add('active');
+        this.state.localColor = e.currentTarget.dataset.color;
       });
     });
 
@@ -209,12 +209,17 @@ class GameApp {
   spawnConfetti() {
     this.els.confettiContainer.innerHTML = '';
     const colors = ['#FF6B6B', '#FFD93D', '#6BCB77', '#4D96FF', '#FF922B'];
-    for (let i = 0; i < 20; i++) {
+    const shapes = ['50%', '0%', '2px']; // circle, square, slight round rect
+    for (let i = 0; i < 35; i++) {
       const c = document.createElement('div');
-      c.className = 'confetti-piece';
+      c.className = 'confetti';
       c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      c.style.borderRadius = shapes[Math.floor(Math.random() * shapes.length)];
+      c.style.width = Math.random() > 0.5 ? '12px' : '8px';
+      c.style.height = Math.random() > 0.5 ? '12px' : '8px';
+      if (Math.random() > 0.7) c.style.width = '16px'; // rectangle
       c.style.left = Math.random() * 100 + '%';
-      c.style.animation = `confetti-fall ${2 + Math.random() * 2}s ease-in forwards`;
+      c.style.animationDuration = (2 + Math.random() * 3) + 's';
       c.style.animationDelay = (Math.random() * 1.5) + 's';
       this.els.confettiContainer.appendChild(c);
     }
@@ -232,7 +237,8 @@ class GameApp {
         this.els.lobbyPlayers.innerHTML = '';
         data.players.forEach(p => {
           const dot = document.createElement('div');
-          dot.className = `player-dot color-${p.color}`;
+          dot.className = `p-dot-mini`;
+          dot.style.backgroundColor = this.playerColors[p.color] || this.playerColors.green;
           this.els.lobbyPlayers.appendChild(dot);
         });
         if (this.state.isHost) this.els.btnStartGame.classList.remove('disabled');
@@ -315,15 +321,16 @@ class GameApp {
         row = document.createElement('div');
         row.className = 'score-row';
         row.dataset.pid = p.id;
-        row.innerHTML = `<div class="score-swatch color-${p.color}"></div><span>${p.name}</span><span class="score-val" data-id="${p.id}">${p.score}</span>`;
+        row.innerHTML = `<div class="score-swatch" style="background-color: ${this.playerColors[p.color]||'#fff'}"></div><span class="score-name">${p.name}</span><span class="score-val" data-id="${p.id}">${p.score}</span>`;
         this.els.hudScoreboard.appendChild(row);
       } else {
         const span = row.querySelector('.score-val');
         if (span.textContent !== p.score.toString()) {
+          const isUp = p.score > parseInt(span.textContent);
           span.textContent = p.score;
-          span.classList.remove('bump');
+          span.classList.remove('bump-up', 'bump-dn');
           void span.offsetWidth; // trigger reflow
-          span.classList.add('bump');
+          span.classList.add(isUp ? 'bump-up' : 'bump-dn');
         }
       }
     });
@@ -369,33 +376,47 @@ class GameApp {
 
   buildCamperDOM(node, color, name) {
     const hex = this.playerColors[color] || this.playerColors.green;
+    const dkHex = this.getDarkColor(color);
     node.innerHTML = `
-      <div class="player-name-tag">${name}</div>
-      <div class="camper-root">
+      <div class="player-label">${name}</div>
+      <div class="camper">
+        <div class="shadow"></div>
         <div class="helmet" style="background:${hex}"></div>
-        <div class="head"><div class="face-detail"></div></div>
-        <div class="body" style="background:${hex}"></div>
-        <div class="arm-left" style="background:${hex}"></div>
-        <div class="arm-right" style="background:${hex}"></div>
-        <div class="leg-left"></div>
-        <div class="leg-right"></div>
+        <div class="head">
+          <div class="eyes"></div>
+          <div class="mouth"></div>
+          <div class="ear-left"></div>
+          <div class="ear-right"></div>
+        </div>
+        <div class="body" style="background:${dkHex}"></div>
+        <div class="arm-left" style="background:${dkHex}"><div class="hand-left"></div></div>
+        <div class="arm-right" style="background:${dkHex}"><div class="hand-right"></div></div>
+        <div class="leg-left"><div class="boot-left"></div></div>
+        <div class="leg-right"><div class="boot-right"></div></div>
       </div>
     `;
   }
 
+  getDarkColor(color) {
+    const darks = { green: '#388E3C', red: '#C62828', blue: '#1565C0', yellow: '#F57F17' };
+    return darks[color] || darks.green;
+  }
+
   buildEmberDOM(node) {
-    node.innerHTML = `<div class="ember-root"><div class="ember-flame"></div></div>`;
+    node.innerHTML = `<div class="ember-root"><div class="ember-glow"></div></div>`;
   }
 
   buildCloudDOM(node) {
     node.innerHTML = `
       <div class="cloud-root">
-        <div class="cloud-body"></div>
-        <div class="cloud-puff-1"></div>
-        <div class="cloud-puff-2"></div>
-        <div class="cloud-rain cr-1"></div>
-        <div class="cloud-rain cr-2"></div>
-        <div class="cloud-rain cr-3"></div>
+        <div class="c-puff-c"></div>
+        <div class="c-puff-l"></div>
+        <div class="c-puff-r"></div>
+        <div class="c-base"></div>
+        <div class="c-rain cr1"></div>
+        <div class="c-rain cr2"></div>
+        <div class="c-rain cr3"></div>
+        <div class="c-rain cr4"></div>
       </div>
     `;
   }
@@ -412,11 +433,13 @@ class GameApp {
 
     this.state.players.forEach(p => {
       let x = p.x, y = p.y, isMoving = p.isMoving;
+      let dx = p.dx || 0;
       if (p.id === this.state.localPlayerId) {
+         dx = this.localTargetPos.x - this.localCurrentPos.x;
          x = this.localCurrentPos.x; y = this.localCurrentPos.y;
-         isMoving = (Math.abs(this.localTargetPos.x - this.localCurrentPos.x) > 1 || Math.abs(this.localTargetPos.y - this.localCurrentPos.y) > 1);
+         isMoving = (Math.abs(dx) > 1 || Math.abs(this.localTargetPos.y - this.localCurrentPos.y) > 1);
       }
-      renderList.push({ id: 'p_' + p.id, type: 'camper', color: p.color, name: p.name, x, y, isMoving });
+      renderList.push({ id: 'p_' + p.id, type: 'camper', color: p.color, name: p.name, x, y, isMoving, dx });
     });
 
     this.state.entities.forEach(e => {
@@ -444,8 +467,14 @@ class GameApp {
         this.activeNodes.set(item.id, node);
       }
 
-      if (item.type === 'camper') {
-         node.classList.toggle('walking', item.isMoving);
+      const camperInner = node.querySelector('.camper');
+      if (item.type === 'camper' && camperInner) {
+         camperInner.classList.toggle('walking', item.isMoving);
+         if (item.dx && item.dx < 0) {
+           camperInner.classList.add('facing-left');
+         } else if (item.dx && item.dx > 0) {
+           camperInner.classList.remove('facing-left');
+         }
       }
       node.style.transform = `translate3d(${item.x}px, ${item.y}px, 0)`;
     });

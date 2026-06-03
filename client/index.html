@@ -3,31 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Dorm Dash</title>
+  <title>Dorm Dash — Multiplayer Camp Game</title>
   <link rel="manifest" href="./manifest.json">
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#1B5E20">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
-  <meta name="theme-color" content="#3a7d44">
 </head>
 <body>
   <div id="offline-banner" class="hidden">You are offline — waiting for connection…</div>
 
-  <!-- Screen 1: Join Screen -->
-  <div id="screen-join" class="screen active">
-    <!-- Join Background Layers -->
-    <div class="join-layer layer-sky"></div>
-    <div class="join-layer layer-mountain-left"></div>
-    <div class="join-layer layer-mountain-right"></div>
-    <div class="join-layer layer-treeline">
-      <div class="tree tree-1"></div><div class="tree tree-2"></div><div class="tree tree-1"></div><div class="tree tree-2"></div>
-      <div class="tree tree-1"></div><div class="tree tree-2"></div><div class="tree tree-1"></div><div class="tree tree-2"></div>
-      <div class="tree tree-1"></div><div class="tree tree-2"></div>
+  <!-- ═══════════════════════════════════════
+       SCREEN 1 — JOIN
+  ═══════════════════════════════════════ -->
+  <div id="screen-join" class="screen">
+    <!-- Layered background -->
+    <div class="jbg-sky"></div>
+    <div class="jbg-trees">
+      <div class="jt jt-a"></div><div class="jt jt-b"></div><div class="jt jt-a"></div>
+      <div class="jt jt-c"></div><div class="jt jt-b"></div><div class="jt jt-a"></div>
+      <div class="jt jt-c"></div><div class="jt jt-b"></div><div class="jt jt-a"></div>
+      <div class="jt jt-b"></div><div class="jt jt-c"></div><div class="jt jt-a"></div>
+      <div class="jt jt-b"></div><div class="jt jt-c"></div>
     </div>
-    <div class="join-layer layer-grass-base"></div>
-    <div class="join-layer layer-grass-fore"></div>
+    <div class="jbg-grass-mid"></div>
+    <div class="jbg-grass-fore"></div>
 
-    <div class="logo-container">
-      <div class="campfire-logo">
+    <!-- Logo -->
+    <div class="logo-block">
+      <div class="campfire cf-logo">
         <div class="cf-base"></div>
         <div class="cf-log cf-log-1"></div>
         <div class="cf-log cf-log-2"></div>
@@ -36,177 +41,267 @@
         <div class="cf-flame-inner"></div>
         <div class="cf-flame-tip"></div>
       </div>
-      <h1 class="game-logo">DORM DASH</h1>
+      <h1 class="game-title">DORM DASH</h1>
     </div>
-    
-    <div class="card panel-wood">
-      <div class="card-header">Enter Your Player Name</div>
+
+    <!-- Join Card -->
+    <div class="card join-card">
+      <div class="card-header-bar">Enter Your Player Name</div>
       <div class="card-body">
-        <input type="text" id="input-name" placeholder="Enter Name" maxlength="12">
-        <div class="avatar-select">
-          <button class="avatar-btn color-green active" data-color="green"></button>
-          <button class="avatar-btn color-red" data-color="red"></button>
-          <button class="avatar-btn color-blue" data-color="blue"></button>
-          <button class="avatar-btn color-yellow" data-color="yellow"></button>
+        <input type="text" id="input-name" class="field" placeholder="Your name…" maxlength="12" autocomplete="off">
+
+        <div class="avatar-row">
+          <button class="avatar-btn active" data-color="green">
+            <div class="mini-helmet" style="--pc:#388E3C"></div>
+            <div class="mini-face">
+              <div class="mini-eyes"></div>
+              <div class="mini-smile"></div>
+            </div>
+          </button>
+          <button class="avatar-btn" data-color="red">
+            <div class="mini-helmet" style="--pc:#C62828"></div>
+            <div class="mini-face">
+              <div class="mini-eyes"></div>
+              <div class="mini-smile"></div>
+            </div>
+          </button>
+          <button class="avatar-btn" data-color="blue">
+            <div class="mini-helmet" style="--pc:#1565C0"></div>
+            <div class="mini-face">
+              <div class="mini-eyes"></div>
+              <div class="mini-smile"></div>
+            </div>
+          </button>
+          <button class="avatar-btn" data-color="yellow">
+            <div class="mini-helmet" style="--pc:#F57F17"></div>
+            <div class="mini-face">
+              <div class="mini-eyes"></div>
+              <div class="mini-smile"></div>
+            </div>
+          </button>
         </div>
-        <div class="room-input-group">
-          <label for="input-room" class="room-lbl">Room Code:</label>
-          <input type="text" id="input-room" placeholder="ABCD" maxlength="8">
-        </div>
+
+        <label class="field-label" for="input-room">Room Code</label>
+        <input type="text" id="input-room" class="field field-mono" placeholder="ABCD" maxlength="8" autocomplete="off">
+
         <button id="btn-create-room" class="btn btn-orange btn-block">Create Room</button>
-        <button id="btn-join-room" class="btn btn-green btn-block">Join Room</button>
+        <button id="btn-join-room"   class="btn btn-green  btn-block">Join Room</button>
       </div>
     </div>
 
-    <button id="btn-toggle-sound-join" class="sound-toggle-btn" aria-label="Toggle sound">
-      <span class="sound-icon-text">
-        <svg class="icon-sound-on" viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-        <svg class="icon-sound-off hidden" viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+    <!-- Sound hint pill -->
+    <button id="btn-toggle-sound-join" class="sound-pill" aria-label="Toggle sound">
+      <span id="sound-icon-join">
+        <svg class="icon-snd-on" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        <svg class="icon-snd-off hidden" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
       </span>
-      <span class="sound-helper-text">Waiting for others? Share your room code!</span>
+      <span class="sound-label">Waiting for others? Share your room code!</span>
     </button>
   </div>
 
-  <!-- Screen 2: Lobby Screen -->
+  <!-- ═══════════════════════════════════════
+       SCREEN 2 — LOBBY
+  ═══════════════════════════════════════ -->
   <div id="screen-lobby" class="screen hidden">
-    <div class="lobby-bg"></div>
-    <div class="top-bar panel-wood-dark">
-      <span class="room-code-display">Room Code: <span id="lobby-room-code">----</span></span>
-      <button id="btn-copy-link" class="btn btn-orange btn-small">Copy Link</button>
+    <!-- Same forest backdrop -->
+    <div class="jbg-sky"></div>
+    <div class="jbg-trees">
+      <div class="jt jt-a"></div><div class="jt jt-b"></div><div class="jt jt-a"></div>
+      <div class="jt jt-c"></div><div class="jt jt-b"></div><div class="jt jt-a"></div>
+      <div class="jt jt-c"></div><div class="jt jt-b"></div><div class="jt jt-a"></div>
+      <div class="jt jt-b"></div><div class="jt jt-c"></div><div class="jt jt-a"></div>
     </div>
+    <div class="jbg-grass-mid"></div>
+    <div class="jbg-grass-fore"></div>
+
+    <div class="lobby-topbar">
+      <span class="lobby-code-label">Room Code: <span id="lobby-room-code" class="code-mono">----</span></span>
+      <button id="btn-copy-link" class="btn btn-orange btn-sm">Copy Link</button>
+    </div>
+
     <div class="invite-bar" id="invite-bar">
       <span>+ Invite Friends: <span id="lobby-invite-link">dormdash.game/----</span></span>
-      <button id="btn-close-invite" class="btn-icon" style="width:24px; height:24px; background:transparent; padding:0;">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      <button id="btn-close-invite" class="invite-close" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
       </button>
     </div>
-    
-    <div class="lobby-content">
-      <div class="card panel-wood lobby-card">
+
+    <div class="lobby-body">
+      <div class="card lobby-card">
+        <!-- Arena mini-preview -->
         <div class="lobby-preview">
-          <div class="preview-text">Game Ready!</div>
-          <div id="lobby-players" class="preview-players">
-            <!-- Player avatars inserted here -->
+          <div class="lp-sky"></div>
+          <div class="lp-trees">
+            <div class="lp-tree"></div><div class="lp-tree"></div><div class="lp-tree"></div>
+            <div class="lp-tree"></div><div class="lp-tree"></div><div class="lp-tree"></div>
           </div>
+          <div class="lp-grass"></div>
+          <div class="lp-dirt"></div>
+          <div class="preview-ready-text">Game Ready!</div>
+          <div id="lobby-players" class="lobby-player-dots"></div>
         </div>
+
+        <!-- Settings -->
         <div class="lobby-settings">
           <div class="setting-row">
-            <label>Round Time:</label>
-            <select id="select-round-time" disabled>
+            <label>Round Time</label>
+            <select id="select-round-time" class="setting-select" disabled>
               <option value="60">1 Minute</option>
               <option value="120">2 Minutes</option>
               <option value="180" selected>3 Minutes</option>
             </select>
           </div>
           <div class="setting-row">
-            <label>Max Players:</label>
-            <select id="select-max-players" disabled>
+            <label>Max Players</label>
+            <select id="select-max-players" class="setting-select" disabled>
               <option value="2">2</option>
               <option value="3">3</option>
               <option value="4" selected>4</option>
             </select>
           </div>
         </div>
-        <button id="btn-start-game" class="btn btn-orange btn-block btn-large">START GAME</button>
+
+        <button id="btn-start-game" class="btn btn-orange btn-block btn-lg disabled">START GAME</button>
+        <div id="lobby-waiting-msg" class="lobby-wait-msg hidden">Waiting for host to start…</div>
       </div>
     </div>
   </div>
 
-  <!-- Screen 3: In-Game Screen -->
+  <!-- ═══════════════════════════════════════
+       SCREEN 3 — GAME
+  ═══════════════════════════════════════ -->
   <div id="screen-game" class="screen hidden">
+
+    <!-- Arena -->
     <div id="arena" class="arena">
-      <!-- Arena Background Layers -->
-      <div id="arena-layer-sky"></div>
-      <div id="arena-layer-treeline-back">
-        <div class="arena-tree"></div><div class="arena-tree"></div><div class="arena-tree"></div><div class="arena-tree"></div>
-        <div class="arena-tree"></div><div class="arena-tree"></div><div class="arena-tree"></div><div class="arena-tree"></div>
-        <div class="arena-tree"></div><div class="arena-tree"></div><div class="arena-tree"></div><div class="arena-tree"></div>
+      <!-- Layer 0: Sky -->
+      <div class="al al-sky"></div>
+      <!-- Layer 1: Distant treeline -->
+      <div class="al al-treeline">
+        <div class="at at-sm"></div><div class="at at-lg"></div><div class="at at-md"></div>
+        <div class="at at-sm"></div><div class="at at-lg"></div><div class="at at-md"></div>
+        <div class="at at-sm"></div><div class="at at-lg"></div><div class="at at-md"></div>
+        <div class="at at-sm"></div><div class="at at-lg"></div><div class="at at-md"></div>
+        <div class="at at-sm"></div><div class="at at-lg"></div>
       </div>
-      <div id="arena-layer-grass-mid"></div>
-      <div id="arena-layer-path"></div>
-      <div id="arena-layer-grass-fore"></div>
-      <div id="arena-layer-rocks">
-        <div class="rock-cluster cluster-1"><div class="rock r1"></div><div class="rock r2"></div><div class="rock r3"></div></div>
-        <div class="rock-cluster cluster-2"><div class="rock r1"></div><div class="rock r2"></div></div>
-        <div class="rock-cluster cluster-3"><div class="rock r1"></div><div class="rock r2"></div><div class="rock r3"></div></div>
+      <!-- Layer 1b: Second treeline row -->
+      <div class="al al-treeline2">
+        <div class="at at-md2"></div><div class="at at-lg2"></div><div class="at at-sm2"></div>
+        <div class="at at-md2"></div><div class="at at-lg2"></div><div class="at at-sm2"></div>
+        <div class="at at-md2"></div><div class="at at-lg2"></div><div class="at at-sm2"></div>
+        <div class="at at-md2"></div><div class="at at-lg2"></div>
       </div>
-      <div id="arena-layer-campfire-deco">
-        <div class="campfire-logo deco">
+      <!-- Layer 2: Grass base -->
+      <div class="al al-grass-base"></div>
+      <!-- Layer 3: Dirt compound -->
+      <div class="al al-dirt"></div>
+      <!-- Layer 4: River -->
+      <div class="al al-river"></div>
+      <!-- Layer 5: Fence -->
+      <div class="al al-fence">
+        <div class="fp"></div><div class="fp"></div><div class="fp"></div><div class="fp"></div>
+        <div class="fp"></div><div class="fp"></div><div class="fp"></div><div class="fp"></div>
+        <div class="fp"></div><div class="fp"></div><div class="fp"></div><div class="fp"></div>
+        <div class="fence-rail"></div>
+      </div>
+      <!-- Layer 6: Rocks -->
+      <div class="al al-rocks">
+        <div class="rg rg1"><div class="rock rk-a"></div><div class="rock rk-b"></div><div class="rock rk-c"></div></div>
+        <div class="rg rg2"><div class="rock rk-a"></div><div class="rock rk-b"></div></div>
+        <div class="rg rg3"><div class="rock rk-a"></div><div class="rock rk-b"></div></div>
+      </div>
+      <!-- Layer 7: Decorative campfire -->
+      <div class="al al-deco-fire">
+        <div class="campfire cf-deco">
           <div class="cf-base"></div>
-          <div class="cf-log cf-log-1"></div>
-          <div class="cf-log cf-log-2"></div>
-          <div class="cf-log cf-log-3"></div>
-          <div class="cf-flame-outer"></div>
-          <div class="cf-flame-inner"></div>
-          <div class="cf-flame-tip"></div>
+          <div class="cf-log cf-log-1"></div><div class="cf-log cf-log-2"></div><div class="cf-log cf-log-3"></div>
+          <div class="cf-flame-outer"></div><div class="cf-flame-inner"></div><div class="cf-flame-tip"></div>
         </div>
       </div>
-      
-      <!-- Entities will be injected here via DOM pool -->
+      <!-- Layer 8: Foreground grass fringe -->
+      <div class="al al-grass-fore"></div>
+      <!-- Layer 40: Foreground tree overlays -->
+      <div class="al al-fg-trees">
+        <div class="fg-tree fg-tree-l1"></div>
+        <div class="fg-tree fg-tree-l2"></div>
+        <div class="fg-tree fg-tree-r1"></div>
+        <div class="fg-tree fg-tree-r2"></div>
+      </div>
+      <!-- Entity pool lives here — z-index 10-30 -->
     </div>
-    
-    <!-- Top HUD -->
+
+    <!-- HUD Top -->
     <div class="hud-top">
-      <div class="scoreboard" id="hud-scoreboard">
-        <!-- Score items injected here -->
-      </div>
-      <div class="timer" id="hud-timer">00:00</div>
-      <div class="powerups" id="hud-powerups">
-        <div class="powerup-slot" id="slot-bolt"><svg viewBox="0 0 24 24" width="24" height="24" fill="gold"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg><div class="duration-bar"></div></div>
-        <div class="powerup-slot" id="slot-shield"><svg viewBox="0 0 24 24" width="24" height="24" fill="lightblue"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg><div class="duration-bar"></div></div>
-        <div class="powerup-slot" id="slot-magnet"><svg viewBox="0 0 24 24" width="24" height="24" fill="silver"><path d="M12 2C8.13 2 5 5.13 5 9v6h4V9c0-1.66 1.34-3 3-3s3 1.34 3 3v6h4V9c0-3.87-3.13-7-7-7z"/></svg><div class="duration-bar"></div></div>
-      </div>
-    </div>
-
-    <!-- Bottom HUD & Controls -->
-    <div class="hud-bottom">
-      <div class="touch-controls" id="touch-dpad">
-        <button class="dpad-btn up" data-dir="up">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/></svg>
-        </button>
-        <button class="dpad-btn left" data-dir="left">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg>
-        </button>
-        <button class="dpad-btn right" data-dir="right">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
-        </button>
-        <button class="dpad-btn down" data-dir="down">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6-1.41-1.41z"/></svg>
-        </button>
-      </div>
-      <div class="action-controls">
-        <button id="btn-menu" class="btn-icon">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
-        </button>
+      <div id="hud-scoreboard" class="hud-scores"></div>
+      <div id="hud-timer" class="hud-timer">03:00</div>
+      <div id="hud-powerups" class="hud-slots">
+        <div class="hud-slot" id="slot-bolt">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="#FFD700"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>
+        </div>
+        <div class="hud-slot" id="slot-shield">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="#90CAF9"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+        </div>
+        <div class="hud-slot" id="slot-magnet">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="#CFD8DC"><path d="M12 2C8.13 2 5 5.13 5 9v6h4V9c0-1.66 1.34-3 3-3s3 1.34 3 3v6h4V9c0-3.87-3.13-7-7-7z"/></svg>
+        </div>
       </div>
     </div>
 
-    <!-- Banner overlay -->
+    <!-- Action banner -->
     <div id="action-banner" class="action-banner hidden">
       <span id="action-banner-text"></span>
     </div>
 
-    <!-- Menu Overlay -->
-    <div id="menu-overlay" class="menu-overlay hidden">
-      <div class="card panel-wood text-center">
-        <h2 id="menu-title" class="gold-text">Paused</h2>
+    <!-- Mobile D-pad -->
+    <div id="mobile-controls" class="mobile-dpad">
+      <button class="dpad-btn dpad-up"    data-dir="up">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/></svg>
+      </button>
+      <button class="dpad-btn dpad-left"  data-dir="left">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg>
+      </button>
+      <button class="dpad-btn dpad-right" data-dir="right">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+      </button>
+      <button class="dpad-btn dpad-down"  data-dir="down">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6-1.41-1.41z"/></svg>
+      </button>
+    </div>
+
+    <!-- Menu button (bottom-right) -->
+    <button id="btn-menu" class="hud-menu-btn" aria-label="Menu">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+        <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94zM12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+      </svg>
+    </button>
+
+    <!-- Pause Menu Overlay -->
+    <div id="menu-overlay" class="pause-overlay hidden">
+      <div class="card pause-card">
+        <h2 id="menu-title" class="pause-title">Game Paused</h2>
         <button id="btn-resume" class="btn btn-blue btn-block">Resume</button>
-        <button id="btn-quit" class="btn btn-red btn-block">Quit</button>
-        <button id="btn-toggle-sound-game" class="btn btn-orange btn-block">Toggle Sound</button>
+        <button id="btn-quit"   class="btn btn-red  btn-block">Quit</button>
+        <button id="btn-toggle-sound-game" class="btn btn-outline btn-block">Toggle Sound</button>
       </div>
     </div>
   </div>
 
-  <!-- Screen 4: End Screen -->
+  <!-- ═══════════════════════════════════════
+       SCREEN 4 — END
+  ═══════════════════════════════════════ -->
   <div id="screen-end" class="screen hidden">
+    <div class="jbg-sky"></div>
+    <div class="jbg-grass-mid"></div>
     <div id="confetti-container"></div>
-    <div class="card panel-wood end-card" style="z-index: 10;">
-      <h1 class="game-logo" id="winner-name">CamperA Wins!</h1>
-      <div id="final-scoreboard" class="final-scoreboard">
-        <!-- Final scores injected here -->
+
+    <div class="card end-card">
+      <div class="trophy-icon">
+        <svg viewBox="0 0 24 24" width="56" height="56" fill="#FFD700"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>
       </div>
+      <h1 id="winner-name" class="winner-title">Loading…</h1>
+      <div id="final-scoreboard" class="final-sb"></div>
       <button id="btn-play-again" class="btn btn-orange btn-block">Play Again</button>
-      <button id="btn-home" class="btn btn-blue btn-block">Return to Home</button>
+      <button id="btn-home"       class="btn btn-outline btn-block">Back to Menu</button>
     </div>
   </div>
 
@@ -215,9 +310,7 @@
   <script src="./app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js')
-        .then(() => console.log('Service Worker Registered'))
-        .catch(err => console.log('Service Worker Registration Failed', err));
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
     }
   </script>
 </body>

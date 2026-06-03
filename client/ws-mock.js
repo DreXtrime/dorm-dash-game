@@ -1,177 +1,218 @@
 class WsMockServer {
-  constructor(onMessage) {
-    this.onMessage = onMessage;
+  constructor() {
     this.players = [];
     this.entities = [];
-    this.state = 'lobby'; 
-    this.timeRemaining = 180;
-    this.tickInterval = null;
-    this.localPlayerId = 'p1';
-    
-    for (let i = 0; i < 15; i++) {
-      this.entities.push({
-        id: 'e' + i,
-        type: 'ember',
-        x: Math.random() * 800 + 100,
-        y: Math.random() * 500 + 100
-      });
-    }
+    this.gameState = 'lobby'; // lobby | playing | ended
+    this.timer = 180; // 3 minutes default
+    this.botInterval = null;
+    this.loopInterval = null;
+    this.bots = [];
+    this.onMessage = null;
+    this.maxPlayers = 4;
   }
 
-  send(dataStr) {
-    const data = JSON.parse(dataStr);
-    setTimeout(() => this.handleMessage(data), 10);
-  }
-
-  handleMessage(data) {
-    switch (data.type) {
+  handleMessage(msg) {
+    switch (msg.type) {
       case 'join_room':
-        this.players.push({
-          id: this.localPlayerId,
-          name: data.playerName,
-          color: data.color,
-          isHost: true,
+        if (this.players.length >= this.maxPlayers) return;
+        const newPlayer = {
+          id: 'p1', // local player
+          name: msg.playerName,
+          color: msg.color || 'green',
+          score: 0,
           x: 200,
           y: 200,
-          score: 0,
-          isMoving: false,
-          activePowerup: null
-        });
-        this.players.push({
-          id: 'bot1',
-          name: 'Bot',
-          color: data.color === 'red' ? 'blue' : 'red',
-          isHost: false,
-          x: 600,
-          y: 300,
-          score: 0,
-          isMoving: false,
-          activePowerup: null
-        });
-        this.sendToClient({
-          type: 'room_update',
-          players: this.players,
-          settings: { roundTime: 180, maxPlayers: 4 }
-        });
-        break;
-      case 'request_start':
-        this.state = 'playing';
-        this.sendToClient({
-          type: 'game_start',
-          startTime: Date.now(),
-          duration: 180
-        });
-        this.startGameLoop();
-        break;
-      case 'input':
-        const p = this.players.find(pl => pl.id === this.localPlayerId);
-        if (p && this.state === 'playing') {
-          p.x += data.dx * 8;
-          p.y += data.dy * 8;
-          p.isMoving = (data.dx !== 0 || data.dy !== 0);
-          p.x = Math.max(0, Math.min(2000, p.x));
-          p.y = Math.max(0, Math.min(2000, p.y));
-
-          this.entities = this.entities.filter(e => {
-            if (e.type === 'ember') {
-              const dist = Math.hypot(p.x - e.x, p.y - e.y);
-              if (dist < 40) {
-                p.score += 10;
-                return false;
-              }
-            }
-            return true;
+          isMoving: false
+        };
+        this.players.push(newPlayer);
+        
+        // Add bots to fill lobby
+        const botNames = ['BotAlpha', 'BotBravo', 'BotCharlie'];
+        const botColors = ['red', 'blue', 'yellow'];
+        for (let i = 0; i < this.maxPlayers - 1; i++) {
+          this.players.push({
+            id: 'bot' + i,
+            name: botNames[i],
+            color: botColors[i],
+            score: 0,
+            x: 100 + (i * 50),
+            y: 100 + (i * 50),
+            isMoving: false,
+            targetX: 0,
+            targetY: 0
           });
-          if (this.entities.length < 15) {
-            this.entities.push({
-              id: 'e' + Date.now() + Math.random(),
-              type: 'ember',
-              x: Math.random() * 1800 + 100,
-              y: Math.random() * 800 + 100
-            });
-          }
+        }
+        
+        this.broadcast({ type: 'room_update', players: this.players, maxPlayers: this.maxPlayers, roundTime: this.timer });
+        break;
+
+      case 'request_start':
+        if (this.players.length > 0 && this.players[0].id === 'p1') {
+          this.startGame();
         }
         break;
+
+      case 'input':
+        const p = this.players.find(p => p.id === 'p1');
+        if (p && this.gameState === 'playing') {
+          p.x += msg.dx * 8;
+          p.y += msg.dy * 8;
+          p.dx = msg.dx;
+          p.isMoving = (msg.dx !== 0 || msg.dy !== 0);
+          
+          // Confine to arena bounds (approximate)
+          p.x = Math.max(50, Math.min(window.innerWidth - 50, p.x));
+          p.y = Math.max(150, Math.min(window.innerHeight - 50, p.y));
+
+          this.checkCollisions(p);
+        }
+        break;
+
       case 'menu_action':
-        this.sendToClient({
-          type: 'menu_broadcast',
-          action: data.action,
-          playerName: this.players[0].name
-        });
-        if (data.action === 'quit') {
+        this.broadcast({ type: 'menu_broadcast', action: msg.action, playerName: this.players[0].name });
+        if (msg.action === 'quit') {
           this.endGame();
-        } else if (data.action === 'pause') {
-          this.state = 'paused';
-        } else if (data.action === 'resume') {
-          this.state = 'playing';
         }
         break;
     }
   }
 
-  startGameLoop() {
-    this.tickInterval = setInterval(() => {
-      if (this.state !== 'playing') return;
-      this.timeRemaining -= 0.05;
-      
-      const bot = this.players.find(p => p.id === 'bot1');
-      if (bot) {
-        // AI: Move to nearest ember
-        let nearestEmber = null;
-        let minDist = Infinity;
-        this.entities.forEach(e => {
-          if (e.type === 'ember') {
-            const d = Math.hypot(e.x - bot.x, e.y - bot.y);
-            if (d < minDist) { minDist = d; nearestEmber = e; }
-          }
-        });
-
-        bot.isMoving = false;
-        if (nearestEmber) {
-          const dx = nearestEmber.x - bot.x;
-          const dy = nearestEmber.y - bot.y;
-          const len = Math.hypot(dx, dy);
-          if (len > 0) {
-            bot.x += (dx / len) * 5;
-            bot.y += (dy / len) * 5;
-            bot.isMoving = true;
-          }
-          if (len < 40) {
-            bot.score += 10;
-            this.entities = this.entities.filter(e => e.id !== nearestEmber.id);
-          }
-        }
-        bot.x = Math.max(0, Math.min(2000, bot.x));
-        bot.y = Math.max(0, Math.min(2000, bot.y));
-      }
-      
-      this.sendToClient({
-        type: 'state_delta',
-        time: Math.floor(this.timeRemaining),
-        players: this.players,
-        entities: this.entities
-      });
-      
-      if (this.timeRemaining <= 0) {
-        this.endGame();
-      }
-    }, 50);
+  startGame() {
+    this.gameState = 'playing';
+    this.spawnEntities();
+    this.broadcast({ type: 'game_start' });
+    
+    this.botInterval = setInterval(() => this.updateBots(), 500);
+    this.loopInterval = setInterval(() => this.gameTick(), 1000 / 20); // 20hz tick
   }
-  
-  endGame() {
-    this.state = 'ended';
-    clearInterval(this.tickInterval);
-    const winner = this.players.reduce((prev, current) => (prev.score > current.score) ? prev : current);
-    const scores = {};
-    this.players.forEach(p => scores[p.id] = p.score);
-    this.sendToClient({
-      type: 'game_end',
-      winnerId: winner.id,
-      scores: scores
+
+  spawnEntities() {
+    this.entities = [];
+    for (let i = 0; i < 5; i++) {
+      this.spawnEmber();
+    }
+    for (let i = 0; i < 2; i++) {
+      this.spawnCloud();
+    }
+  }
+
+  spawnEmber() {
+    this.entities.push({
+      id: 'e_' + Math.random().toString(36).substr(2, 9),
+      type: 'ember',
+      x: 100 + Math.random() * (window.innerWidth - 200),
+      y: 200 + Math.random() * (window.innerHeight - 300)
     });
   }
 
-  sendToClient(data) {
-    this.onMessage(JSON.stringify(data));
+  spawnCloud() {
+    this.entities.push({
+      id: 'c_' + Math.random().toString(36).substr(2, 9),
+      type: 'cloud',
+      x: 100 + Math.random() * (window.innerWidth - 200),
+      y: 200 + Math.random() * (window.innerHeight - 300)
+    });
+  }
+
+  updateBots() {
+    if (this.gameState !== 'playing') return;
+    this.players.forEach(bot => {
+      if (!bot.id.startsWith('bot')) return;
+      
+      // Random movement
+      if (Math.random() > 0.3) {
+        bot.targetX = Math.max(50, Math.min(window.innerWidth - 50, bot.x + (Math.random() - 0.5) * 200));
+        bot.targetY = Math.max(150, Math.min(window.innerHeight - 50, bot.y + (Math.random() - 0.5) * 200));
+        bot.isMoving = true;
+      } else {
+        bot.isMoving = false;
+      }
+
+      if (bot.isMoving) {
+        const dx = bot.targetX - bot.x;
+        const dy = bot.targetY - bot.y;
+        const dist = Math.hypot(dx, dy);
+        bot.dx = dx;
+        if (dist > 5) {
+          bot.x += (dx / dist) * 15;
+          bot.y += (dy / dist) * 15;
+        } else {
+          bot.isMoving = false;
+        }
+        this.checkCollisions(bot);
+      }
+    });
+  }
+
+  checkCollisions(player) {
+    const hitboxSize = 30;
+    
+    // Check Embers
+    for (let i = this.entities.length - 1; i >= 0; i--) {
+      const ent = this.entities[i];
+      if (ent.type === 'ember') {
+        const dist = Math.hypot(player.x - ent.x, player.y - ent.y);
+        if (dist < hitboxSize) {
+          player.score += 10;
+          this.entities.splice(i, 1);
+          setTimeout(() => this.spawnEmber(), 2000); // Respawn after 2s
+        }
+      } else if (ent.type === 'cloud') {
+        const dist = Math.hypot(player.x - ent.x, player.y - ent.y);
+        if (dist < hitboxSize + 20) {
+          // Stun effect (mock doesn't implement full stun logic, just minor point drain)
+          if (Math.random() > 0.8 && player.score > 0) player.score -= 1;
+        }
+      }
+    }
+  }
+
+  gameTick() {
+    if (this.gameState !== 'playing') return;
+    
+    this.broadcast({
+      type: 'state_delta',
+      time: this.timer,
+      players: this.players,
+      entities: this.entities
+    });
+
+    if (Math.random() < 0.05) this.timer--; // Mock timer decrement
+
+    if (this.timer <= 0) {
+      this.endGame();
+    }
+  }
+
+  endGame() {
+    this.gameState = 'ended';
+    clearInterval(this.botInterval);
+    clearInterval(this.loopInterval);
+    
+    const scores = {};
+    let winnerId = this.players[0].id;
+    let maxScore = -1;
+    
+    this.players.forEach(p => {
+      scores[p.id] = p.score;
+      if (p.score > maxScore) {
+        maxScore = p.score;
+        winnerId = p.id;
+      }
+    });
+
+    this.broadcast({
+      type: 'game_end',
+      scores: scores,
+      winnerId: winnerId
+    });
+  }
+
+  broadcast(data) {
+    if (this.onMessage) {
+      this.onMessage(JSON.stringify(data));
+    }
   }
 }
+
+window.WsMockServer = WsMockServer;
