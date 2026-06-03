@@ -1,14 +1,15 @@
 class WsClient {
+  static isMockMode = true;
+
   constructor(url, onMessageCallback) {
     this.url = url;
     this.onMessageCallback = onMessageCallback;
     this.ws = null;
     this.mockServer = null;
-    this.useMock = true;
   }
 
   connect() {
-    if (this.useMock) {
+    if (WsClient.isMockMode) {
       console.log('Using Mock WebSocket Server');
       this.mockServer = new WsMockServer(this.onMessageCallback);
       return Promise.resolve();
@@ -22,7 +23,8 @@ class WsClient {
         this.ws.onerror = (err) => reject(err);
         this.ws.onclose = () => {
           console.log('WebSocket closed');
-          document.getElementById('offline-banner').classList.remove('hidden');
+          const banner = document.getElementById('offline-banner');
+          if (banner) banner.classList.remove('hidden');
         };
       } catch (err) {
         reject(err);
@@ -32,7 +34,7 @@ class WsClient {
 
   send(data) {
     const payload = JSON.stringify(data);
-    if (this.useMock) {
+    if (WsClient.isMockMode) {
       this.mockServer.send(payload);
     } else if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(payload);

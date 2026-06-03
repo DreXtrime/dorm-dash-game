@@ -34,6 +34,7 @@ class WsMockServer {
           x: 200,
           y: 200,
           score: 0,
+          isMoving: false,
           activePowerup: null
         });
         this.players.push({
@@ -44,6 +45,7 @@ class WsMockServer {
           x: 600,
           y: 300,
           score: 0,
+          isMoving: false,
           activePowerup: null
         });
         this.sendToClient({
@@ -66,7 +68,7 @@ class WsMockServer {
         if (p && this.state === 'playing') {
           p.x += data.dx * 8;
           p.y += data.dy * 8;
-          // bounds
+          p.isMoving = (data.dx !== 0 || data.dy !== 0);
           p.x = Math.max(0, Math.min(2000, p.x));
           p.y = Math.max(0, Math.min(2000, p.y));
 
@@ -74,7 +76,7 @@ class WsMockServer {
             if (e.type === 'ember') {
               const dist = Math.hypot(p.x - e.x, p.y - e.y);
               if (dist < 40) {
-                p.score += 1;
+                p.score += 10;
                 return false;
               }
             }
@@ -114,8 +116,31 @@ class WsMockServer {
       
       const bot = this.players.find(p => p.id === 'bot1');
       if (bot) {
-        bot.x += (Math.random() - 0.5) * 6;
-        bot.y += (Math.random() - 0.5) * 6;
+        // AI: Move to nearest ember
+        let nearestEmber = null;
+        let minDist = Infinity;
+        this.entities.forEach(e => {
+          if (e.type === 'ember') {
+            const d = Math.hypot(e.x - bot.x, e.y - bot.y);
+            if (d < minDist) { minDist = d; nearestEmber = e; }
+          }
+        });
+
+        bot.isMoving = false;
+        if (nearestEmber) {
+          const dx = nearestEmber.x - bot.x;
+          const dy = nearestEmber.y - bot.y;
+          const len = Math.hypot(dx, dy);
+          if (len > 0) {
+            bot.x += (dx / len) * 5;
+            bot.y += (dy / len) * 5;
+            bot.isMoving = true;
+          }
+          if (len < 40) {
+            bot.score += 10;
+            this.entities = this.entities.filter(e => e.id !== nearestEmber.id);
+          }
+        }
         bot.x = Math.max(0, Math.min(2000, bot.x));
         bot.y = Math.max(0, Math.min(2000, bot.y));
       }

@@ -45,7 +45,10 @@ class GameApp {
       menuTitle: document.getElementById('menu-title'),
       arena: document.getElementById('arena'),
       winnerName: document.getElementById('winner-name'),
-      finalScoreboard: document.getElementById('final-scoreboard')
+      finalScoreboard: document.getElementById('final-scoreboard'),
+      offlineBanner: document.getElementById('offline-banner'),
+      soundIconText: document.querySelector('.sound-icon-text'),
+      confettiContainer: document.getElementById('confetti-container')
     };
 
     this.state = {
@@ -55,12 +58,11 @@ class GameApp {
       isHost: false,
       players: [],
       entities: [],
-      gameState: 'lobby', // lobby, playing, paused, ended
+      gameState: 'lobby',
       timeRemaining: 0,
       input: { dx: 0, dy: 0, keys: new Set() }
     };
     
-    // Game Rendering
     this.domPool = [];
     this.poolSize = 60;
     this.activeNodes = new Map();
@@ -68,14 +70,19 @@ class GameApp {
     this.lastTime = 0;
     this.inputInterval = null;
 
-    // Predictions / Interpolation
     this.localTargetPos = { x: 0, y: 0 };
     this.localCurrentPos = { x: 0, y: 0 };
+    this.playerColors = { green: '#4CAF50', red: '#F44336', blue: '#2196F3', yellow: '#FFC107' };
     
     this.init();
   }
 
   init() {
+    // Hide offline banner if mock mode is used
+    if (WsClient.isMockMode) {
+      this.els.offlineBanner.style.display = 'none';
+    }
+
     this.setupEventListeners();
     this.updateSoundIcon();
     
@@ -125,7 +132,6 @@ class GameApp {
       navigator.clipboard.writeText(`dormdash.game/${this.state.roomId}`);
     });
 
-    // Sound toggle
     const toggleSound = () => {
       this.soundEnabled = !this.soundEnabled;
       localStorage.setItem('dorm-dash-volume', this.soundEnabled ? '1' : '0');
@@ -134,35 +140,26 @@ class GameApp {
     this.els.btnToggleSoundJoin.addEventListener('click', toggleSound);
     this.els.btnToggleSoundGame.addEventListener('click', toggleSound);
 
-    // Menu
-    this.els.btnMenu.addEventListener('click', () => {
-      this.ws.sendMenuAction('pause');
-    });
+    this.els.btnMenu.addEventListener('click', () => this.ws.sendMenuAction('pause'));
     this.els.btnResume.addEventListener('click', () => {
       this.ws.sendMenuAction('resume');
       this.els.menuOverlay.classList.add('hidden');
     });
-    this.els.btnQuit.addEventListener('click', () => {
-      this.ws.sendMenuAction('quit');
-    });
+    this.els.btnQuit.addEventListener('click', () => this.ws.sendMenuAction('quit'));
 
-    // Keyboard Input
     window.addEventListener('keydown', (e) => {
       this.state.input.keys.add(e.code);
       if (e.code === 'Escape' && this.state.gameState === 'playing') {
         this.ws.sendMenuAction('pause');
       }
     });
-    window.addEventListener('keyup', (e) => {
-      this.state.input.keys.delete(e.code);
-    });
+    window.addEventListener('keyup', (e) => this.state.input.keys.delete(e.code));
 
-    // Touch Input
     const dpad = document.querySelectorAll('.dpad-btn');
     dpad.forEach(btn => {
       btn.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        const dir = e.target.dataset.dir;
+        const dir = e.currentTarget.dataset.dir;
         if (dir === 'up') this.state.input.keys.add('ArrowUp');
         if (dir === 'down') this.state.input.keys.add('ArrowDown');
         if (dir === 'left') this.state.input.keys.add('ArrowLeft');
@@ -170,7 +167,7 @@ class GameApp {
       }, { passive: false });
       btn.addEventListener('touchend', (e) => {
         e.preventDefault();
-        const dir = e.target.dataset.dir;
+        const dir = e.currentTarget.dataset.dir;
         if (dir === 'up') this.state.input.keys.delete('ArrowUp');
         if (dir === 'down') this.state.input.keys.delete('ArrowDown');
         if (dir === 'left') this.state.input.keys.delete('ArrowLeft');
@@ -178,26 +175,13 @@ class GameApp {
       });
     });
 
-    // End screen
-    this.els.btnPlayAgain.addEventListener('click', () => {
-      window.location.reload();
-    });
-    this.els.btnHome.addEventListener('click', () => {
-      window.location.reload();
-    });
+    this.els.btnPlayAgain.addEventListener('click', () => window.location.reload());
+    this.els.btnHome.addEventListener('click', () => window.location.reload());
   }
 
   updateSoundIcon() {
-    const onIcon = this.els.btnToggleSoundJoin.querySelector('.icon-sound-on');
-    const offIcon = this.els.btnToggleSoundJoin.querySelector('.icon-sound-off');
-    if (onIcon && offIcon) {
-      if (this.soundEnabled) {
-        onIcon.classList.remove('hidden');
-        offIcon.classList.add('hidden');
-      } else {
-        onIcon.classList.add('hidden');
-        offIcon.classList.remove('hidden');
-      }
+    if (this.els.soundIconText) {
+      this.els.soundIconText.textContent = this.soundEnabled ? '🔊' : '🔇';
     }
   }
 
@@ -211,6 +195,7 @@ class GameApp {
   showScreen(name) {
     Object.values(this.screens).forEach(s => s.classList.add('hidden'));
     this.screens[name].classList.remove('hidden');
+    if (name !== 'end') this.els.confettiContainer.innerHTML = '';
   }
 
   showBanner(text) {
@@ -221,28 +206,36 @@ class GameApp {
     }, 4000);
   }
 
+  spawnConfetti() {
+    this.els.confettiContainer.innerHTML = '';
+    const colors = ['#FF6B6B', '#FFD93D', '#6BCB77', '#4D96FF', '#FF922B'];
+    for (let i = 0; i < 20; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti-piece';
+      c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      c.style.left = Math.random() * 100 + '%';
+      c.style.animation = `confetti-fall ${2 + Math.random() * 2}s ease-in forwards`;
+      c.style.animationDelay = (Math.random() * 1.5) + 's';
+      this.els.confettiContainer.appendChild(c);
+    }
+  }
+
   onMessage(dataStr) {
     const data = JSON.parse(dataStr);
-    
     switch (data.type) {
       case 'room_update':
         this.state.players = data.players;
         this.state.isHost = data.players[0].id === (this.ws.mockServer ? 'p1' : this.state.localPlayerId);
         if (this.ws.mockServer) this.state.localPlayerId = 'p1';
-        
         this.els.lobbyRoomCode.textContent = this.state.roomId;
         this.els.lobbyInviteLink.textContent = `dormdash.game/${this.state.roomId}`;
-        
         this.els.lobbyPlayers.innerHTML = '';
         data.players.forEach(p => {
           const dot = document.createElement('div');
           dot.className = `player-dot color-${p.color}`;
           this.els.lobbyPlayers.appendChild(dot);
         });
-        
-        if (this.state.isHost) {
-          this.els.btnStartGame.classList.remove('disabled');
-        }
+        if (this.state.isHost) this.els.btnStartGame.classList.remove('disabled');
         break;
 
       case 'game_start':
@@ -258,26 +251,19 @@ class GameApp {
         this.state.timeRemaining = data.time;
         this.updateScoreboard(data.players);
         
-        // Timer update
         const mins = Math.floor(data.time / 60);
-        const secs = data.time % 60;
+        const secs = Math.floor(data.time % 60);
         this.els.hudTimer.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        if (data.time <= 10) {
-          this.els.hudTimer.classList.add('pulse');
-        } else {
-          this.els.hudTimer.classList.remove('pulse');
-        }
+        if (data.time <= 10) this.els.hudTimer.classList.add('pulse');
+        else this.els.hudTimer.classList.remove('pulse');
 
-        // Target positions for interpolation
         this.state.players = data.players;
         this.state.entities = data.entities;
         
         const local = data.players.find(p => p.id === this.state.localPlayerId);
         if (local) {
-          // Prediction reconciliation
           const dist = Math.hypot(this.localTargetPos.x - local.x, this.localTargetPos.y - local.y);
           if (dist > 6) {
-             // Snap or smooth reconcile
              this.localTargetPos.x = local.x;
              this.localTargetPos.y = local.y;
              this.localCurrentPos.x += (local.x - this.localCurrentPos.x) * 0.5;
@@ -316,23 +302,18 @@ class GameApp {
             if (id === data.winnerId) this.els.winnerName.textContent = `${p.name} Wins!`;
           }
         });
-        
         this.showScreen('end');
+        this.spawnConfetti();
         break;
     }
   }
 
   updateScoreboard(players) {
-    // Only update if changed (simplified)
     this.els.hudScoreboard.innerHTML = '';
     players.forEach(p => {
       const row = document.createElement('div');
       row.className = 'score-row';
-      row.innerHTML = `
-        <div class="score-swatch color-${p.color}"></div>
-        <span>${p.name}</span>
-        <span class="score-val" data-id="${p.id}">${p.score}</span>
-      `;
+      row.innerHTML = `<div class="score-swatch color-${p.color}"></div><span>${p.name}</span><span class="score-val" data-id="${p.id}">${p.score}</span>`;
       this.els.hudScoreboard.appendChild(row);
     });
   }
@@ -340,34 +321,25 @@ class GameApp {
   startInputLoop() {
     this.inputInterval = setInterval(() => {
       if (this.state.gameState !== 'playing') return;
-      
       let dx = 0, dy = 0;
       if (this.state.input.keys.has('KeyW') || this.state.input.keys.has('ArrowUp')) dy -= 1;
       if (this.state.input.keys.has('KeyS') || this.state.input.keys.has('ArrowDown')) dy += 1;
       if (this.state.input.keys.has('KeyA') || this.state.input.keys.has('ArrowLeft')) dx -= 1;
       if (this.state.input.keys.has('KeyD') || this.state.input.keys.has('ArrowRight')) dx += 1;
       
-      // Normalize
       if (dx !== 0 && dy !== 0) {
-        const len = Math.sqrt(dx*dx + dy*dy);
-        dx /= len; dy /= len;
+        const len = Math.sqrt(dx*dx + dy*dy); dx /= len; dy /= len;
       }
       
       if (dx !== 0 || dy !== 0) {
-        // Client prediction
         this.localTargetPos.x += dx * 8;
         this.localTargetPos.y += dy * 8;
         this.ws.sendInput(dx, dy, false);
       }
-    }, 50); // 20Hz
+    }, 50);
   }
 
-  getNode() {
-    if (this.domPool.length > 0) {
-      return this.domPool.pop();
-    }
-    return null; // Pool empty
-  }
+  getNode() { return this.domPool.length > 0 ? this.domPool.pop() : null; }
   
   returnNode(node) {
     node.style.display = 'none';
@@ -376,49 +348,63 @@ class GameApp {
     this.domPool.push(node);
   }
 
+  buildCamperDOM(node, color, name) {
+    const hex = this.playerColors[color] || this.playerColors.green;
+    node.innerHTML = `
+      <div class="player-name-tag">${name}</div>
+      <div class="camper-root">
+        <div class="helmet" style="background:${hex}"></div>
+        <div class="head"><div class="face-detail"></div></div>
+        <div class="body" style="background:${hex}"></div>
+        <div class="arm-left" style="background:${hex}"></div>
+        <div class="arm-right" style="background:${hex}"></div>
+        <div class="leg-left"></div>
+        <div class="leg-right"></div>
+      </div>
+    `;
+  }
+
+  buildEmberDOM(node) {
+    node.innerHTML = `<div class="ember-root"><div class="ember-flame"></div></div>`;
+  }
+
+  buildCloudDOM(node) {
+    node.innerHTML = `
+      <div class="cloud-root">
+        <div class="cloud-body"></div>
+        <div class="cloud-puff-1"></div>
+        <div class="cloud-puff-2"></div>
+        <div class="cloud-rain cr-1"></div>
+        <div class="cloud-rain cr-2"></div>
+        <div class="cloud-rain cr-3"></div>
+      </div>
+    `;
+  }
+
   gameLoop(timestamp) {
     if (this.state.gameState !== 'playing') {
        this.rafId = requestAnimationFrame((t) => this.gameLoop(t));
        return;
     }
-    // Budget: ~1ms logic
     
-    // 1. Calculate positions
     const renderList = [];
-    
-    // Local player smooth prediction
     this.localCurrentPos.x += (this.localTargetPos.x - this.localCurrentPos.x) * 0.3;
     this.localCurrentPos.y += (this.localTargetPos.y - this.localCurrentPos.y) * 0.3;
 
     this.state.players.forEach(p => {
-      let x = p.x;
-      let y = p.y;
+      let x = p.x, y = p.y, isMoving = p.isMoving;
       if (p.id === this.state.localPlayerId) {
-         x = this.localCurrentPos.x;
-         y = this.localCurrentPos.y;
+         x = this.localCurrentPos.x; y = this.localCurrentPos.y;
+         isMoving = (Math.abs(this.localTargetPos.x - this.localCurrentPos.x) > 1 || Math.abs(this.localTargetPos.y - this.localCurrentPos.y) > 1);
       }
-      
-      renderList.push({
-        id: 'p_' + p.id,
-        type: 'camper',
-        color: p.color,
-        name: p.name,
-        x, y
-      });
+      renderList.push({ id: 'p_' + p.id, type: 'camper', color: p.color, name: p.name, x, y, isMoving });
     });
 
     this.state.entities.forEach(e => {
-      renderList.push({
-        id: e.id,
-        type: e.type,
-        x: e.x, y: e.y
-      });
+      renderList.push({ id: e.id, type: e.type, x: e.x, y: e.y });
     });
 
-    // 2. DOM Updates (Batched write)
     const currentActiveIds = new Set(renderList.map(item => item.id));
-    
-    // Return stale nodes
     for (const [id, node] of this.activeNodes.entries()) {
       if (!currentActiveIds.has(id)) {
         this.returnNode(node);
@@ -426,32 +412,22 @@ class GameApp {
       }
     }
 
-    // Update or assign nodes
     renderList.forEach(item => {
       let node = this.activeNodes.get(item.id);
       if (!node) {
         node = this.getNode();
-        if (!node) return; // Dropped if pool empty
-        
+        if (!node) return;
         node.style.display = 'block';
         node.className = `entity ${item.type}`;
-        
-        if (item.type === 'camper') {
-          node.style.backgroundImage = `url(./assets/sprites/camper-${item.color}.png)`;
-          node.innerHTML = `<div class="player-name-tag">${item.name}</div>`;
-        } else if (item.type === 'ember') {
-          node.style.backgroundImage = `url(./assets/sprites/ember.png)`;
-        } else if (item.type === 'cloud') {
-          node.style.backgroundImage = `url(./assets/sprites/cloud.png)`;
-        }
+        if (item.type === 'camper') this.buildCamperDOM(node, item.color, item.name);
+        else if (item.type === 'ember') this.buildEmberDOM(node);
+        else if (item.type === 'cloud') this.buildCloudDOM(node);
         this.activeNodes.set(item.id, node);
       }
 
-      // Calculate direction for camper
       if (item.type === 'camper') {
-         node.classList.add('walking');
+         node.classList.toggle('walking', item.isMoving);
       }
-
       node.style.transform = `translate3d(${item.x}px, ${item.y}px, 0)`;
     });
 
@@ -459,6 +435,4 @@ class GameApp {
   }
 }
 
-window.onload = () => {
-  window.app = new GameApp();
-};
+window.onload = () => { window.app = new GameApp(); };
