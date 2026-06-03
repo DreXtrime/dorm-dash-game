@@ -273,10 +273,10 @@ class GameApp {
         break;
 
       case 'menu_broadcast':
-        this.showBanner(`★ ${data.action.toUpperCase()} by ${data.playerName} ★`);
+        this.showBanner(`[ ${data.action.toUpperCase()} by ${data.playerName} ]`);
         if (data.action === 'pause') {
           this.state.gameState = 'paused';
-          this.els.menuTitle.textContent = '★ Game Paused ★';
+          this.els.menuTitle.textContent = 'Game Paused';
           this.els.menuOverlay.classList.remove('hidden');
         } else if (data.action === 'resume') {
           this.state.gameState = 'playing';
@@ -309,12 +309,31 @@ class GameApp {
   }
 
   updateScoreboard(players) {
-    this.els.hudScoreboard.innerHTML = '';
     players.forEach(p => {
-      const row = document.createElement('div');
-      row.className = 'score-row';
-      row.innerHTML = `<div class="score-swatch color-${p.color}"></div><span>${p.name}</span><span class="score-val" data-id="${p.id}">${p.score}</span>`;
-      this.els.hudScoreboard.appendChild(row);
+      let row = this.els.hudScoreboard.querySelector(`.score-row[data-pid="${p.id}"]`);
+      if (!row) {
+        row = document.createElement('div');
+        row.className = 'score-row';
+        row.dataset.pid = p.id;
+        row.innerHTML = `<div class="score-swatch color-${p.color}"></div><span>${p.name}</span><span class="score-val" data-id="${p.id}">${p.score}</span>`;
+        this.els.hudScoreboard.appendChild(row);
+      } else {
+        const span = row.querySelector('.score-val');
+        if (span.textContent !== p.score.toString()) {
+          span.textContent = p.score;
+          span.classList.remove('bump');
+          void span.offsetWidth; // trigger reflow
+          span.classList.add('bump');
+        }
+      }
+    });
+    
+    // Remove stale rows
+    const currentIds = new Set(players.map(p => p.id));
+    Array.from(this.els.hudScoreboard.children).forEach(row => {
+      if (!currentIds.has(row.dataset.pid)) {
+        row.remove();
+      }
     });
   }
 
