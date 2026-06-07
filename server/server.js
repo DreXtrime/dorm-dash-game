@@ -456,18 +456,18 @@ function gameTick(room) {
     }
 
     let cloudSlow = false;
+    const hasShield = p.powerups.shield && p.powerups.shield > now;
+    
     for (const e of room.entities.values()) {
-      if (e.type === 'cloud' && checkAABB(p.x, p.y, 40, 40, e.x, e.y, 72, 48)) {
-        if (!p.cloudImmunityEndTime || now > p.cloudImmunityEndTime) {
-          if (p.powerups.shield && p.powerups.shield > now) {
-            delete p.powerups.shield;
-            p.cloudImmunityEndTime = now + 1500; 
-          } else {
+      if (e.type === 'cloud' && checkAABB(p.x, p.y, 40, 40, e.x, e.y, 50, 50)) {
+        // Only apply penalties/slowdown if they DO NOT have a shield
+        if (!hasShield) {
+          if (!p.cloudImmunityEndTime || now > p.cloudImmunityEndTime) {
             p.score = Math.max(0, p.score - 5);
             p.cloudImmunityEndTime = now + 1500;
           }
+          cloudSlow = true;
         }
-        cloudSlow = true;
       }
     }
     
@@ -482,8 +482,8 @@ function gameTick(room) {
     if (p.powerups.shield && p.powerups.shield <= now) delete p.powerups.shield;
     if (p.powerups.magnet && p.powerups.magnet <= now) delete p.powerups.magnet;
 
-    if (cloudSlow && (!p.powerups.shield || p.powerups.shield <= now)) {
-      baseSpeed *= 0.5;
+    if (cloudSlow) {
+      baseSpeed *= 0.3;
     }
 
     p.x += p.dx * baseSpeed * dt;
@@ -500,7 +500,7 @@ function gameTick(room) {
           room.entities.delete(id);
         }
       } else if (e.type === 'cloud') {
-        if (checkAABB(p.x, p.y, 30, 30, e.x, e.y, 40, 40)) {
+        if (checkAABB(p.x, p.y, 30, 30, e.x, e.y, 50, 50)) {
           if (p.powerups.shield && p.powerups.shield > now) {
             // SHIELD LOGIC: Destroy the cloud and consume the shield
             delete p.powerups.shield;

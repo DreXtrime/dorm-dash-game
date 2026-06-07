@@ -89,6 +89,8 @@ class GameApp {
       this.els.arena.appendChild(node);
       this.domPool.push(node);
     }
+    this.resizeArena();
+    window.addEventListener('resize', () => this.resizeArena());
   }
 
   setupEventListeners() {
@@ -526,6 +528,14 @@ class GameApp {
     this.domPool.push(node);
   }
 
+  resizeArena() {
+    const scaleX = window.innerWidth / 1200;
+    const scaleY = window.innerHeight / 700;
+    const scale = Math.min(scaleX, scaleY);
+    const wrapper = document.querySelector('.arena-wrapper');
+    if (wrapper) wrapper.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  }
+
   buildCamperDOM(node, color, name) {
     const hex = this.playerColors[color] || this.playerColors.green;
     const dkHex = this.getDarkColor(color);
@@ -547,7 +557,6 @@ class GameApp {
         <div class="leg-right"><div class="boot-right"></div></div>
       </div>
     `;
-    node.querySelector('.camper').style.transform = `scale(${this.scaleX}, ${this.scaleY})`;
   }
 
   getDarkColor(color) {
@@ -557,13 +566,11 @@ class GameApp {
 
   buildEmberDOM(node) {
     node.innerHTML = `<div class="ember-root"><div class="ember-glow"></div></div>`;
-    node.querySelector('.ember-root').style.transform = `scale(${this.scaleX}, ${this.scaleY})`;
   }
 
   buildCloudDOM(node) {
     node.innerHTML = `
-    <div class="cloud-scale-wrapper">
-        <div class="cloud-root">
+      <div class="cloud-root">
         <div class="c-puff-c"></div>
         <div class="c-puff-l"></div>
         <div class="c-puff-r"></div>
@@ -572,10 +579,8 @@ class GameApp {
         <div class="c-rain cr2"></div>
         <div class="c-rain cr3"></div>
         <div class="c-rain cr4"></div>
-        </div>
-    </div>
+      </div>
     `;
-    node.querySelector('.cloud-root').style.transform = `scale(${this.scaleX}, ${this.scaleY})`;
   }
 
   buildPowerupDOM(node, type) {
@@ -594,8 +599,6 @@ class GameApp {
        return;
     }
 
-    this.scaleX = this.els.arena.offsetWidth / 1200;
-    this.scaleY = this.els.arena.offsetHeight / 700;
     const renderList = [];
 
     this.state.players.forEach(p => {
@@ -657,21 +660,17 @@ class GameApp {
         this.activeNodes.set(item.id, node);
       }
 
-      const inner = node.firstElementChild?.classList.contains('player-label') 
-        ? node.children[1] 
-        : node.firstElementChild;
-      if (inner) inner.style.transform = `scale(${this.scaleX}, ${this.scaleY})`;
-        
-      const camperInner = node.querySelector('.camper');
-      if (item.type === 'camper' && camperInner) {
-         camperInner.classList.toggle('walking', item.isMoving);
-         if (item.dx && item.dx < 0) {
-           camperInner.classList.add('facing-left');
-         } else if (item.dx && item.dx > 0) {
-           camperInner.classList.remove('facing-left');
-         }
+      if (item.type === 'camper') {
+        const camperInner = node.querySelector('.camper');
+        if (camperInner) {
+          camperInner.classList.toggle('walking', item.isMoving);
+          if (item.dx < 0) camperInner.dataset.facing = 'left';
+          else if (item.dx > 0) camperInner.dataset.facing = 'right';
+          const facingLeft = camperInner.dataset.facing === 'left';
+          camperInner.style.transform = facingLeft ? 'scaleX(-1)' : '';
+        }
       }
-      node.style.transform = `translate3d(${item.x * this.scaleX}px, ${item.y * this.scaleY}px, 0)`;
+      node.style.transform = `translate3d(${item.x}px, ${item.y}px, 0)`;
     });
 
     this.rafId = requestAnimationFrame((t) => this.gameLoop(t));
