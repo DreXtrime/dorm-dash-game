@@ -260,6 +260,39 @@ class GameApp {
     if (name !== 'end') this.els.confettiContainer.innerHTML = '';
   }
 
+  startCountdown(callback) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 55; pointer-events: none;
+    `;
+    document.getElementById('screen-game').appendChild(overlay);
+  
+    let count = 3;
+    const tick = () => {
+      overlay.innerHTML = `
+        <div style="
+          font-family: 'Fredoka One', cursive;
+          font-size: 12rem;
+          color: white;
+          text-shadow: 0 0 40px rgba(255,200,0,0.8), 4px 4px 0 #5D2E0C;
+          animation: winner-bounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        ">${count > 0 ? count : 'GO!'}</div>
+      `;
+      if (count === 0) {
+        setTimeout(() => {
+          overlay.remove();
+          callback();
+        }, 600);
+      } else {
+        count--;
+        setTimeout(tick, 900);
+      }
+    };
+    tick();
+  }
+
   showBanner(text, type='error') {
     // TOAST NOTIFICATION: Creates a new element dynamically, animates it in, and removes it after 4s
     const container = document.getElementById('toast-container');
@@ -358,12 +391,15 @@ class GameApp {
 
       case 'game_start':
         this.playSound('start');
-        this.state.gameState = 'playing';
+        this.state.gameState = 'paused'; 
         this.showScreen('game');
-        this.startInputLoop();
         this.lastTime = performance.now();
-        this.rafId = requestAnimationFrame((t) => this.gameLoop(t));
-        break;
+        this.rafId = requestAnimationFrame((t) => this.gameLoop(t));  
+        this.startCountdown(() => {
+        this.state.gameState = 'playing';
+        this.startInputLoop();  
+      });
+      break;
 
       case 'state_delta':
         const oldPlayers = new Map(this.state.players.map(p => [p.id, p]));
