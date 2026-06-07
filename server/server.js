@@ -507,7 +507,6 @@ function gameTick(room) {
             room.entities.delete(id);
           } else {
             p.score = Math.max(0, p.score - 5);
-            room.entities.delete(id);
           }
         }
       } else if (e.type.startsWith('powerup-')) {
