@@ -110,7 +110,9 @@ class GameApp {
       const room = this.els.roomInput.value.trim() || 'ABCD';
       this.state.roomId = room;
       
-      this.ws = new WsClient('wss://dummy.dormdash.game', this.onMessage.bind(this));
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}`;
+      this.ws = new WsClient(wsUrl, this.onMessage.bind(this));
       this.ws.connect().then(() => {
         this.ws.joinRoom(room, name, this.state.localColor);
         this.showScreen('lobby');
@@ -254,6 +256,16 @@ class GameApp {
         break;
 
       case 'state_delta':
+        const oldPlayers = new Map(this.state.players.map(p => [p.id, p]));
+        data.players.forEach(newP => {
+          const oldP = oldPlayers.get(newP.id);
+          if (oldP) {
+            if (newP.score > oldP.score) this.playSound('pickup');
+            if (newP.score < oldP.score) this.playSound('cloud_hit');
+            if (newP.activePowerup && !oldP.activePowerup) this.playSound('powerup');
+          }
+        });
+
         this.state.timeRemaining = data.time;
         this.updateScoreboard(data.players);
         
@@ -268,6 +280,12 @@ class GameApp {
         
         const local = data.players.find(p => p.id === this.state.localPlayerId);
         if (local) {
+          document.querySelectorAll('.hud-slot').forEach(s => s.classList.remove('active'));
+          if (local.activePowerup) {
+            const slot = document.getElementById(`slot-${local.activePowerup}`);
+            if (slot) slot.classList.add('active');
+          }
+
           const dist = Math.hypot(this.localTargetPos.x - local.x, this.localTargetPos.y - local.y);
           if (dist > 6) {
              this.localTargetPos.x = local.x;
@@ -421,6 +439,11 @@ class GameApp {
     `;
   }
 
+  buildPowerupDOM(node, type) {
+    const powerupName = type.replace('powerup-', '');
+    node.innerHTML = `<img src="./assets/sprites/powerup-${powerupName}.png" width="32" height="32" class="powerup-pulse" style="transform:translate(-50%, -50%)">`;
+  }
+
   gameLoop(timestamp) {
     if (this.state.gameState !== 'playing') {
        this.rafId = requestAnimationFrame((t) => this.gameLoop(t));
@@ -464,6 +487,7 @@ class GameApp {
         if (item.type === 'camper') this.buildCamperDOM(node, item.color, item.name);
         else if (item.type === 'ember') this.buildEmberDOM(node);
         else if (item.type === 'cloud') this.buildCloudDOM(node);
+        else if (item.type.startsWith('powerup-')) this.buildPowerupDOM(node, item.type);
         this.activeNodes.set(item.id, node);
       }
 

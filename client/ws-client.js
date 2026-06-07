@@ -1,5 +1,5 @@
 class WsClient {
-  static isMockMode = true;
+  static isMockMode = false;
 
   constructor(url, onMessageCallback) {
     this.url = url;
