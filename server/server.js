@@ -515,8 +515,9 @@ function gameTick(room) {
             // SHIELD LOGIC: Destroy the cloud and consume the shield
             delete p.powerups.shield;
             room.entities.delete(id);
-          } else {
+          } else if (!p.cloudImmunityEndTime || now > p.cloudImmunityEndTime) {
             p.score = Math.max(0, p.score - 5);
+            p.cloudImmunityEndTime = now + 1500;
           }
         }
       } else if (e.type.startsWith('powerup-')) {
