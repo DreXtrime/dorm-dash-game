@@ -168,47 +168,40 @@ wss.on('connection', (ws) => {
       if (room.hostId === ws.id && room.state === 'lobby') {
         room.state = 'playing';
         room.timer = room.roundTime;
-        
-        let i = 0;
-        const activePlayers = Array.from(room.players.values()).filter(p => p.inLobby !== false);
-        
-        // KICK NON-LOBBY PLAYERS
-        for (const p of room.players.values()) {
-           if (p.inLobby === false) {
-             if (p.ws) {
-               p.ws.send(JSON.stringify({ type: 'error', message: 'The next game has already started without you!' }));
-               p.ws.close();
-             }
-           }
-        }
+        room.botMode = !!data.botMode; // track if this is a solo-vs-bot game
 
-        activePlayers.forEach((p) => {
+        const activePlayers = Array.from(room.players.values()).filter(p => p.inLobby !== false);
+
+        activePlayers.forEach((p, i) => {
           p.score = 0;
           p.waitingNext = false;
-          p.x = 40 + ((i % 4) * 25);
-          p.y = 280 + (Math.floor(i / 4) * 40);
+          p.x = 200 + (i * 120);
+          p.y = 350;
           p.powerups = {};
           p.isMoving = false;
-          i++;
         });
 
-        // Fill with bots if less than 2 players to ensure testing works seamlessly
-        if (room.players.size < 2) {
+        // Always add a bot when botMode, or when solo player
+        if (room.botMode || room.players.size < 2) {
           const botId = 'bot_' + generateId();
           room.players.set(botId, {
             id: botId,
             ws: null,
-            name: 'Bot Camper',
+            name: 'Bot',
             color: 'red',
             score: 0,
-            x: 600,
+            x: 700,
             y: 350,
             dx: 0,
             dy: 0,
             isMoving: false,
             powerups: {},
-            targetX: 600,
-            targetY: 350
+            targetX: 700,
+            targetY: 350,
+            // Bot AI state
+            botState: 'wander',       // wander | chase_ember | chase_powerup | evade_cloud
+            botStateTimer: 0,
+            botReactionDelay: 0,      // ticks before bot "notices" a new target
           });
         }
 
@@ -216,11 +209,9 @@ wss.on('connection', (ws) => {
         spawnCloud(room); spawnCloud(room);
 
         broadcast(room, { type: 'game_start', startTime: Date.now(), duration: room.timer });
-        
+
         room.lastTime = Date.now();
-        room.tickInterval = setInterval(() => {
-      gameTick(room);
-    }, 33);
+        room.tickInterval = setInterval(() => gameTick(room), 33);
       }
     } else if (data.type === 'update_settings' && room) {
       if (room.hostId === ws.id && room.state === 'lobby') {
@@ -442,12 +433,72 @@ function gameTick(room) {
 
   for (const p of room.players.values()) {
     if (!p.ws) {
-      if (Math.random() < 0.02) {
-         p.targetX = 100 + Math.random() * (ARENA_WIDTH - 200);
-         p.targetY = 250 + Math.random() * (ARENA_HEIGHT - 350);
+      // ── SMART BOT AI ──────────────────────────────────────
+      // Difficulty: bot gets faster reactions as game progresses
+      const gameProgress = 1 - (room.timer / room.roundTime); // 0→1
+      const reactionInterval = Math.max(8, 30 - Math.floor(gameProgress * 22)); // ticks
+      p.botStateTimer = (p.botStateTimer || 0) + 1;
+
+      if (p.botStateTimer >= reactionInterval) {
+        p.botStateTimer = 0;
+
+        const entities = Array.from(room.entities.values());
+
+        // 1. Check for nearby threatening clouds first (evade)
+        let nearestCloud = null, nearestCloudDist = 110;
+        for (const e of entities) {
+          if (e.type !== 'cloud') continue;
+          const d = Math.hypot(p.x - e.x, p.y - e.y);
+          if (d < nearestCloudDist) { nearestCloud = e; nearestCloudDist = d; }
+        }
+
+        if (nearestCloud && !p.powerups.shield) {
+          // Evade: run directly away from cloud
+          const awayX = p.x + (p.x - nearestCloud.x);
+          const awayY = p.y + (p.y - nearestCloud.y);
+          p.targetX = Math.max(80, Math.min(ARENA_WIDTH - 80, awayX));
+          p.targetY = Math.max(230, Math.min(ARENA_HEIGHT - 80, awayY));
+          p.botState = 'evade_cloud';
+        } else {
+          // 2. Look for powerups (high priority)
+          let nearestPU = null, nearestPUDist = Infinity;
+          for (const e of entities) {
+            if (!e.type.startsWith('powerup-')) continue;
+            const d = Math.hypot(p.x - e.x, p.y - e.y);
+            if (d < nearestPUDist) { nearestPU = e; nearestPUDist = d; }
+          }
+
+          // 3. Look for nearest ember
+          let nearestEmber = null, nearestEmberDist = Infinity;
+          for (const e of entities) {
+            if (e.type !== 'ember') continue;
+            const d = Math.hypot(p.x - e.x, p.y - e.y);
+            if (d < nearestEmberDist) { nearestEmber = e; nearestEmberDist = d; }
+          }
+
+          // Decide target: powerup < 250px wins over ember, else go for ember
+          if (nearestPU && nearestPUDist < 250) {
+            p.targetX = nearestPU.x;
+            p.targetY = nearestPU.y;
+            p.botState = 'chase_powerup';
+          } else if (nearestEmber) {
+            // Add small imperfection — bot misses slightly (harder at end of game)
+            const jitter = Math.max(0, 30 - Math.floor(gameProgress * 28));
+            p.targetX = nearestEmber.x + (Math.random() - 0.5) * jitter;
+            p.targetY = nearestEmber.y + (Math.random() - 0.5) * jitter;
+            p.botState = 'chase_ember';
+          } else {
+            // Wander to a random arena point
+            p.targetX = 150 + Math.random() * (ARENA_WIDTH - 300);
+            p.targetY = 250 + Math.random() * (ARENA_HEIGHT - 350);
+            p.botState = 'wander';
+          }
+        }
       }
+
+      // Move towards target
       const dist = Math.hypot(p.targetX - p.x, p.targetY - p.y);
-      if (dist > 5) {
+      if (dist > 8) {
         p.dx = (p.targetX - p.x) / dist;
         p.dy = (p.targetY - p.y) / dist;
       } else {

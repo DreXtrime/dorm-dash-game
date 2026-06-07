@@ -123,7 +123,24 @@ class GameApp {
 
     this.els.btnCreate.addEventListener('click', () => this.connectAndJoin('create'));
     this.els.btnJoin.addEventListener('click', () => this.connectAndJoin('join'));
-    
+
+    // VS BOT — auto-creates a private room and starts immediately
+    document.getElementById('btn-vs-bot').addEventListener('click', () => {
+      const name = this.els.nameInput.value.trim() || 'Camper';
+      const room = 'BOT' + Math.random().toString(36).substring(2, 5).toUpperCase();
+      this.state.roomId = room;
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}`;
+      this.ws = new WsClient(wsUrl, this.onMessage.bind(this));
+      this.ws.connect().then(() => {
+        this.ws.joinRoom(room, name, this.state.localColor, 'create');
+        // After joined_room fires, auto-request start with bot flag
+        this._pendingBotMode = true;
+      }).catch(() => {
+        this.showBanner('Failed to connect to the server.');
+      });
+    });
+
     this.els.btnStartGame.addEventListener('click', () => {
       if (this.state.isHost) this.ws.requestStart();
     });
@@ -307,7 +324,14 @@ class GameApp {
 
       case 'joined_room':
         this.state.localPlayerId = data.id;
-        this.showScreen('lobby');
+        if (this._pendingBotMode) {
+          this._pendingBotMode = false;
+          // Skip lobby — immediately request a bot game
+          this.ws.send({ type: 'request_start', botMode: true });
+          // Don't show lobby screen; game_start will transition us
+        } else {
+          this.showScreen('lobby');
+        }
         break;
 
       case 'room_update':
