@@ -293,6 +293,25 @@ class GameApp {
     tick();
   }
 
+  spawnFloatingText(x, y, text, color = '#FFD700') {
+    const el = document.createElement('div');
+    el.textContent = text;
+    el.style.cssText = `
+      position: absolute;
+      left: ${x}px;
+      top: ${y}px;
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.4rem;
+      color: ${color};
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+      pointer-events: none;
+      z-index: 100;
+      animation: float-up 0.8s ease-out forwards;
+    `;
+    this.els.arena.appendChild(el);
+    setTimeout(() => el.remove(), 800);
+  }
+
   showBanner(text, type='error') {
     // TOAST NOTIFICATION: Creates a new element dynamically, animates it in, and removes it after 4s
     const container = document.getElementById('toast-container');
@@ -411,8 +430,14 @@ class GameApp {
             if (!Number.isNaN(oldP.displayX)) newP.displayX = oldP.displayX;
             if (!Number.isNaN(oldP.displayY)) newP.displayY = oldP.displayY;
             if (newP.id === this.state.localPlayerId) {
-              if (newP.score > oldP.score) this.playSound('pickup');
-              if (newP.score < oldP.score) this.playSound('cloud_hit');
+              if (newP.score > oldP.score) {
+                this.playSound('pickup');
+                this.spawnFloatingText(newP.displayX, newP.displayY, `+${newP.score - oldP.score}`);
+              }
+              if (newP.score < oldP.score) {
+                this.playSound('cloud_hit');
+                this.spawnFloatingText(newP.displayX, newP.displayY, `-5`, '#FF5252');
+              }
             }
           }
           if (newP.displayX === undefined) newP.displayX = newP.x;
