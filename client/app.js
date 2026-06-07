@@ -19,7 +19,6 @@ class GameApp {
       btnCreate: document.getElementById('btn-create-room'),
       btnJoin: document.getElementById('btn-join-room'),
       btnCopyLink: document.getElementById('btn-copy-link'),
-      btnCloseInvite: document.getElementById('btn-close-invite'),
       btnStartGame: document.getElementById('btn-start-game'),
       btnLeaveLobby: document.getElementById('btn-leave-lobby'),
       btnMenu: document.getElementById('btn-menu'),
@@ -31,10 +30,8 @@ class GameApp {
       btnHome: document.getElementById('btn-home'),
       lobbyPlayers: document.getElementById('lobby-players'),
       lobbyRoomCode: document.getElementById('lobby-room-code'),
-      lobbyInviteLink: document.getElementById('lobby-invite-link'),
-      inviteBar: document.getElementById('invite-bar'),
-      selectRoundTime: document.getElementById('select-round-time'),
-      selectMaxPlayers: document.getElementById('select-max-players'),
+      selectRoundTime: document.getElementById('lobby-setting-timer'),
+      selectMaxPlayers: document.getElementById('lobby-setting-players'),
       hudScoreboard: document.getElementById('hud-scoreboard'),
       hudTimer: document.getElementById('hud-timer'),
       actionBanner: document.getElementById('action-banner'),
@@ -165,12 +162,9 @@ class GameApp {
       });
     });
 
-    this.els.btnCloseInvite.addEventListener('click', () => {
-      this.els.inviteBar.style.display = 'none';
-    });
-
     this.els.btnCopyLink.addEventListener('click', () => {
-      navigator.clipboard.writeText(`dormdash.game/${this.state.roomId}`);
+      navigator.clipboard.writeText(this.state.roomId);
+      this.showBanner('Room code copied!', 'info');
     });
 
     const toggleSound = () => {
@@ -226,6 +220,11 @@ class GameApp {
     // Wait/Play Again Flow
     this.els.btnPlayAgain.addEventListener('click', () => {
       this.els.btnPlayAgain.blur();
+      
+      // FIX: Force browser to clear the stuck `:active` CSS state by momentarily removing it from the render tree.
+      this.els.btnPlayAgain.style.display = 'none';
+      setTimeout(() => this.els.btnPlayAgain.style.display = '', 50);
+      
       if (this.state.isHost) {
         this.ws.send({ type: 'play_again' });
       } else {
@@ -242,9 +241,9 @@ class GameApp {
   }
 
   updateSoundIcon() {
-    if (this.els.soundIconText) {
-      this.els.soundIconText.textContent = this.soundEnabled ? '🔊' : '🔇';
-    }
+    document.querySelectorAll('.sound-icon-text').forEach(el => {
+      el.textContent = this.soundEnabled ? '🔊' : '🔇';
+    });
   }
 
   playSound(name) {
@@ -342,7 +341,6 @@ class GameApp {
         }
 
         this.els.lobbyRoomCode.textContent = this.state.roomId;
-        this.els.lobbyInviteLink.textContent = `dormdash.game/${this.state.roomId}`;
         this.els.lobbyPlayers.innerHTML = '';
         data.players.forEach(p => {
           const dot = document.createElement('div');
@@ -375,8 +373,10 @@ class GameApp {
             newP.color = oldP.color;
             if (!Number.isNaN(oldP.displayX)) newP.displayX = oldP.displayX;
             if (!Number.isNaN(oldP.displayY)) newP.displayY = oldP.displayY;
-            if (newP.score > oldP.score) this.playSound('pickup');
-            if (newP.score < oldP.score) this.playSound('cloud_hit');
+            if (newP.id === this.state.localPlayerId) {
+              if (newP.score > oldP.score) this.playSound('pickup');
+              if (newP.score < oldP.score) this.playSound('cloud_hit');
+            }
           }
           if (newP.displayX === undefined) newP.displayX = newP.x;
           if (newP.displayY === undefined) newP.displayY = newP.y;
@@ -457,6 +457,12 @@ class GameApp {
         });
         this.showScreen('end');
         this.spawnConfetti();
+        
+        // Reset the Play Again button state for the next round
+        this.els.btnPlayAgain.classList.remove('hidden');
+        const waitMsg = document.getElementById('wait-host-msg');
+        if (waitMsg) waitMsg.classList.add('hidden');
+        
         break;
     }
   }
@@ -592,8 +598,13 @@ class GameApp {
       if (p.displayX === undefined || Number.isNaN(p.displayX)) p.displayX = p.x;
       if (p.displayY === undefined || Number.isNaN(p.displayY)) p.displayY = p.y;
       
-      p.displayX += (p.x - p.displayX) * 0.25;
-      p.displayY += (p.y - p.displayY) * 0.25;
+      if (Math.abs(p.x - p.displayX) > 150 || Math.abs(p.y - p.displayY) > 150) {
+        p.displayX = p.x;
+        p.displayY = p.y;
+      } else {
+        p.displayX += (p.x - p.displayX) * 0.25;
+        p.displayY += (p.y - p.displayY) * 0.25;
+      }
       
       let x = p.displayX;
       let y = p.displayY;
@@ -607,8 +618,13 @@ class GameApp {
       if (e.displayX === undefined) e.displayX = e.x;
       if (e.displayY === undefined) e.displayY = e.y;
       
-      e.displayX += (e.x - e.displayX) * 0.25;
-      e.displayY += (e.y - e.displayY) * 0.25;
+      if (Math.abs(e.x - e.displayX) > 150 || Math.abs(e.y - e.displayY) > 150) {
+        e.displayX = e.x;
+        e.displayY = e.y;
+      } else {
+        e.displayX += (e.x - e.displayX) * 0.25;
+        e.displayY += (e.y - e.displayY) * 0.25;
+      }
       
       renderList.push({ id: e.id, type: e.type, x: e.displayX, y: e.displayY });
     });

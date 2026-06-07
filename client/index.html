@@ -14,6 +14,8 @@
 <body>
   <div id="offline-banner" class="hidden">You are offline — waiting for connection…</div>
 
+  <div id="toast-container" class="toast-container"></div>
+
   <!-- ═══════════════════════════════════════
        SCREEN 1 — JOIN
   ═══════════════════════════════════════ -->
@@ -125,13 +127,6 @@
     <div class="lobby-topbar">
       <span class="lobby-code-label">Room Code: <span id="lobby-room-code" class="code-mono">----</span></span>
       <button id="btn-copy-link" class="btn btn-orange btn-sm">Copy Link</button>
-    </div>
-
-    <div class="invite-bar" id="invite-bar">
-      <span>+ Invite Friends: <span id="lobby-invite-link">dormdash.game/----</span></span>
-      <button id="btn-close-invite" class="invite-close" aria-label="Close">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-      </button>
     </div>
 
     <div class="lobby-body">
@@ -302,9 +297,11 @@
     <div id="menu-overlay" class="pause-overlay hidden">
       <div class="card pause-card">
         <h2 id="menu-title" class="pause-title">Game Paused</h2>
-        <button id="btn-resume" class="btn btn-blue btn-block">Resume</button>
-        <button id="btn-quit"   class="btn btn-red  btn-block">Quit</button>
-        <button id="btn-toggle-sound-game" class="btn btn-outline btn-block">Toggle Sound</button>
+        <button id="btn-resume" class="btn btn-green btn-block" style="margin-bottom: 10px;">Resume</button>
+        <button id="btn-toggle-sound-game" class="btn btn-outline btn-block" style="margin-bottom: 10px;">
+          <span class="sound-icon-text">🔊</span> Toggle Sound
+        </button>
+        <button id="btn-quit"   class="btn btn-red btn-block">Quit Game</button>
       </div>
     </div>
   </div>

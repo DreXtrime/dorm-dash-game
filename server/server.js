@@ -70,17 +70,20 @@ function broadcast(room, data) {
 }
 
 function broadcastRoomUpdate(room) {
-  const playersArr = Array.from(room.players.values()).map(p => ({
-    id: p.id,
-    name: p.name,
-    color: p.color,
-    isHost: p.id === room.hostId
-  }));
-  broadcast(room, {
+  const lobbyPlayers = Array.from(room.players.values()).filter(p => p.inLobby !== false);
+  const payload = JSON.stringify({
     type: 'room_update',
-    players: playersArr,
-    settings: { roundTime: room.timer, maxPlayers: room.maxPlayers || 4 }
+    players: lobbyPlayers.map(p => ({
+      id: p.id, name: p.name, color: p.color
+    })),
+    settings: { roundTime: room.roundTime, maxPlayers: room.maxPlayers || 4 }
   });
+  
+  for (const p of room.players.values()) {
+    if (p.inLobby !== false && p.ws) {
+      p.ws.send(payload);
+    }
+  }
 }
 
 wss.on('connection', (ws) => {
@@ -115,6 +118,7 @@ wss.on('connection', (ws) => {
           players: new Map(),
           entities: new Map(),
           state: 'lobby',
+          roundTime: 180,
           timer: 180,
           maxPlayers: 4,
           hostId: ws.id,
@@ -148,8 +152,9 @@ wss.on('connection', (ws) => {
         ws: ws,
         name: playerName,
         color: data.color || 'green',
+        inLobby: true,
         score: 0,
-        x: 100 + r.players.size * 50,
+        x: 200,
         y: 200,
         dx: 0,
         dy: 0,
@@ -162,14 +167,28 @@ wss.on('connection', (ws) => {
     } else if (data.type === 'request_start' && room) {
       if (room.hostId === ws.id && room.state === 'lobby') {
         room.state = 'playing';
-        room.timer = room.timer || 180;
+        room.timer = room.roundTime;
         
         let i = 0;
-        room.players.forEach(p => {
+        const activePlayers = Array.from(room.players.values()).filter(p => p.inLobby !== false);
+        
+        // KICK NON-LOBBY PLAYERS
+        for (const p of room.players.values()) {
+           if (p.inLobby === false) {
+             if (p.ws) {
+               p.ws.send(JSON.stringify({ type: 'error', message: 'The next game has already started without you!' }));
+               p.ws.close();
+             }
+           }
+        }
+
+        activePlayers.forEach((p) => {
           p.score = 0;
-          p.x = 200 + (i * 200);
-          p.y = 350;
+          p.waitingNext = false;
+          p.x = 40 + ((i % 4) * 25);
+          p.y = 280 + (Math.floor(i / 4) * 40);
           p.powerups = {};
+          p.isMoving = false;
           i++;
         });
 
@@ -199,11 +218,16 @@ wss.on('connection', (ws) => {
         broadcast(room, { type: 'game_start', startTime: Date.now(), duration: room.timer });
         
         room.lastTime = Date.now();
-        room.tickInterval = setInterval(() => gameTick(room), TICK_MS);
+        room.tickInterval = setInterval(() => {
+      gameTick(room);
+    }, 33);
       }
     } else if (data.type === 'update_settings' && room) {
       if (room.hostId === ws.id && room.state === 'lobby') {
-        if (data.settings.roundTime) room.timer = data.settings.roundTime;
+        if (data.settings.roundTime) {
+          room.roundTime = data.settings.roundTime;
+          room.timer = room.roundTime;
+        }
         if (data.settings.maxPlayers) {
           room.maxPlayers = data.settings.maxPlayers;
           // KICK LOGIC: If the host reduces maxPlayers below current count, kick the most recently joined players.
@@ -263,25 +287,36 @@ wss.on('connection', (ws) => {
     } else if (data.type === 'play_again' && room && room.state === 'ended') {
       if (room.hostId === ws.id) {
         room.state = 'lobby';
-        // RESTART LOGIC: Only retain players who explicitly clicked 'Play Again' (waitingNext = true).
-        // Kick anyone who was idling on the end screen to prevent AFK players from filling up lobbies.
+        const hostP = room.players.get(ws.id);
+        if (hostP) hostP.inLobby = true;
+        
         for (const p of room.players.values()) {
-           if (p.id !== room.hostId && !p.waitingNext) {
-             if (p.ws) {
-                p.ws.send(JSON.stringify({ type: 'error', message: 'You were removed because you did not choose to play again.' }));
-                p.ws.close();
-             }
-           } else {
+           if (p.waitingNext) {
              p.waitingNext = false;
+             p.inLobby = true;
+             if (p.ws) p.ws.send(JSON.stringify({ type: 'room_recreated' }));
            }
         }
+        if (hostP && hostP.ws) hostP.ws.send(JSON.stringify({ type: 'room_recreated' }));
         broadcastRoomUpdate(room);
-        broadcast(room, { type: 'room_recreated' });
       }
-    } else if (data.type === 'wait_next' && room && room.state === 'ended') {
-      // PLAY AGAIN LOGIC: Mark this player as wanting to join the next match.
+    } else if (data.type === 'wait_next' && room) {
       const p = room.players.get(ws.id);
-      if (p) p.waitingNext = true;
+      if (!p) return;
+      
+      if (room.state === 'ended') {
+        p.waitingNext = true;
+      } else if (room.state === 'lobby') {
+        p.inLobby = true;
+        p.waitingNext = false;
+        if (p.ws) p.ws.send(JSON.stringify({ type: 'room_recreated' }));
+        broadcastRoomUpdate(room);
+      } else if (room.state === 'playing') {
+        if (p.ws) {
+          p.ws.send(JSON.stringify({ type: 'error', message: 'The next game has already started without you!' }));
+          p.ws.close();
+        }
+      }
     }
   });
 
@@ -355,10 +390,8 @@ function checkAABB(x1, y1, w1, h1, x2, y2, w2, h2) {
 }
 
 function gameTick(room) {
-  if (room.state !== 'playing') return;
-  
   const now = Date.now();
-  const dt = (now - room.lastTime) / 1000;
+  const dt = Math.min((now - room.lastTime) / 1000, 0.1);
   room.lastTime = now;
   
   room.timer -= dt;
@@ -519,15 +552,15 @@ function endGame(room) {
   room.state = 'ended';
   clearInterval(room.tickInterval);
   const scores = {};
-  let maxScore = -1;
   let winnerId = null;
-  room.players.forEach(p => {
-    scores[p.id] = p.score;
-    if (p.score > maxScore) {
-      maxScore = p.score;
-      winnerId = p.id;
+  let maxScore = -1;
+  for (const p of room.players.values()) {
+    if (p.inLobby !== false) {
+      scores[p.id] = p.score;
+      if (p.score > maxScore) { maxScore = p.score; winnerId = p.id; }
     }
-  });
+    p.inLobby = false; // Everyone is marked out of lobby
+  }
   broadcast(room, { type: 'game_end', scores, winnerId });
 }
 
