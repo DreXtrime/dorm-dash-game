@@ -547,6 +547,7 @@ class GameApp {
         <div class="leg-right"><div class="boot-right"></div></div>
       </div>
     `;
+    node.querySelector('.camper').style.transform = `scale(${this.scaleX}, ${this.scaleY})`;
   }
 
   getDarkColor(color) {
@@ -556,11 +557,13 @@ class GameApp {
 
   buildEmberDOM(node) {
     node.innerHTML = `<div class="ember-root"><div class="ember-glow"></div></div>`;
+    node.querySelector('.ember-root').style.transform = `scale(${this.scaleX}, ${this.scaleY})`;
   }
 
   buildCloudDOM(node) {
     node.innerHTML = `
-      <div class="cloud-root">
+    <div class="cloud-scale-wrapper">
+        <div class="cloud-root">
         <div class="c-puff-c"></div>
         <div class="c-puff-l"></div>
         <div class="c-puff-r"></div>
@@ -569,8 +572,10 @@ class GameApp {
         <div class="c-rain cr2"></div>
         <div class="c-rain cr3"></div>
         <div class="c-rain cr4"></div>
-      </div>
+        </div>
+    </div>
     `;
+    node.querySelector('.cloud-root').style.transform = `scale(${this.scaleX}, ${this.scaleY})`;
   }
 
   buildPowerupDOM(node, type) {
@@ -588,7 +593,9 @@ class GameApp {
        this.rafId = requestAnimationFrame((t) => this.gameLoop(t));
        return;
     }
-    
+
+    this.scaleX = this.els.arena.offsetWidth / 1200;
+    this.scaleY = this.els.arena.offsetHeight / 700;
     const renderList = [];
 
     this.state.players.forEach(p => {
@@ -650,6 +657,11 @@ class GameApp {
         this.activeNodes.set(item.id, node);
       }
 
+      const inner = node.firstElementChild?.classList.contains('player-label') 
+        ? node.children[1] 
+        : node.firstElementChild;
+      if (inner) inner.style.transform = `scale(${this.scaleX}, ${this.scaleY})`;
+        
       const camperInner = node.querySelector('.camper');
       if (item.type === 'camper' && camperInner) {
          camperInner.classList.toggle('walking', item.isMoving);
@@ -659,7 +671,7 @@ class GameApp {
            camperInner.classList.remove('facing-left');
          }
       }
-      node.style.transform = `translate3d(${item.x}px, ${item.y}px, 0)`;
+      node.style.transform = `translate3d(${item.x * this.scaleX}px, ${item.y * this.scaleY}px, 0)`;
     });
 
     this.rafId = requestAnimationFrame((t) => this.gameLoop(t));

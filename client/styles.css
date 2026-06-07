@@ -120,7 +120,29 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 /* ═══════════════════════════════════════
    GAME ARENA BACKGROUND
 ═══════════════════════════════════════ */
-.arena { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #2E7D32; overflow: hidden; }
+.arena-wrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1200px;
+  height: 700px;
+  transform-origin: center center;
+  /* JS will set the scale via inline style */
+}
+
+.arena {
+  width: 1200px;
+  height: 700px;
+  position: relative;
+  overflow: hidden;
+  background: #2E7D32;
+}
+#screen-game {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1B5E20;
+}
 .al { position: absolute; pointer-events: none; }
 
 .al-sky { top: 0; left: 0; width: 100%; height: 28%; background: linear-gradient(180deg, #6BA3C8 0%, #9EC5DE 60%, #B8D9EE 100%); z-index: 0; }
@@ -257,7 +279,6 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 .camper.walking .shadow { animation: shadow-pulse 0.42s ease-in-out infinite; }
 .camper.walking .eyes { animation: blink 2s infinite; }
 
-.camper.facing-left { transform: scaleX(-1); }
 .camper.facing-left .player-label { transform: scaleX(-1) translateX(50%); left: auto; right: 50%; }
 
 /* ═══════════════════════════════════════
@@ -267,7 +288,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 .ember-glow { width: 100%; height: 100%; background: radial-gradient(ellipse at 50% 80%, #FFD700 0%, #FF8C00 35%, #FF4500 65%, transparent 100%); border-radius: 50% 50% 45% 45%; filter: drop-shadow(0 0 6px rgba(255,150,0,0.7)); animation: ember-dance 0.7s ease-in-out infinite; transform-origin: center bottom; }
 @keyframes ember-dance { 0% { transform: scaleX(1) scaleY(1) rotate(-3deg) translateY(0); } 25% { transform: scaleX(0.88) scaleY(1.12) rotate(2deg) translateY(-2px); } 50% { transform: scaleX(1.08) scaleY(0.94) rotate(-2deg) translateY(0); } 75% { transform: scaleX(0.92) scaleY(1.08) rotate(3deg) translateY(-1px); } 100% { transform: scaleX(1) scaleY(1) rotate(-3deg) translateY(0); } }
 
-.cloud-root { position: relative; width: 72px; height: 48px; margin-left: -36px; margin-top: -24px; filter: drop-shadow(0 2px 4px rgba(60,80,100,0.3)); animation: cloud-drift 8s ease-in-out infinite; }
+.cloud-root { position: relative; width: 72px; height: 48px; filter: drop-shadow(0 2px 4px rgba(60,80,100,0.3)); animation: cloud-drift 8s ease-in-out infinite; }
 @keyframes cloud-drift { 0%,100% { transform: translateX(0); } 50% { transform: translateX(4px); } }
 .c-puff-c { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 44px; height: 38px; background: #90A4AE; border-radius: 50%; z-index: 2; }
 .c-puff-l { position: absolute; top: 6px; left: 0; width: 32px; height: 28px; background: #B0BEC5; border-radius: 50%; }
