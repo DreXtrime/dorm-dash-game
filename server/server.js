@@ -79,7 +79,7 @@ function broadcastRoomUpdate(room) {
   broadcast(room, {
     type: 'room_update',
     players: playersArr,
-    settings: { roundTime: room.timer, maxPlayers: 4 }
+    settings: { roundTime: room.timer, maxPlayers: room.maxPlayers || 4 }
   });
 }
 
@@ -95,9 +95,20 @@ wss.on('connection', (ws) => {
 
     if (data.type === 'join_room') {
       const roomId = data.roomId.toUpperCase();
-      ws.roomId = roomId;
+      const intent = data.intent;
       
       let r = rooms.get(roomId);
+      
+      if (intent === 'join' && !r) {
+        ws.send(JSON.stringify({ type: 'join_error', message: "Room doesn't exist, try creating one." }));
+        return;
+      }
+
+      if (intent === 'create' && r) {
+        ws.send(JSON.stringify({ type: 'join_error', message: "Room already exists! Try joining it instead." }));
+        return;
+      }
+
       if (!r) {
         r = {
           id: roomId,
@@ -105,6 +116,7 @@ wss.on('connection', (ws) => {
           entities: new Map(),
           state: 'lobby',
           timer: 180,
+          maxPlayers: 4,
           hostId: ws.id,
           tickInterval: null,
           lastTime: 0
@@ -112,15 +124,15 @@ wss.on('connection', (ws) => {
         rooms.set(roomId, r);
       }
       
+      ws.roomId = roomId;
+
       if (r.state !== 'lobby') {
-        ws.send(JSON.stringify({ type: 'error', message: 'Game already started' }));
-        ws.close();
+        ws.send(JSON.stringify({ type: 'error', message: 'Game already in progress' }));
         return;
       }
       
-      if (r.players.size >= 4) {
-        ws.send(JSON.stringify({ type: 'error', message: 'Room is full' }));
-        ws.close();
+      if (r.players.size >= (r.maxPlayers || 4)) {
+        ws.send(JSON.stringify({ type: 'join_error', message: 'Room is full' }));
         return;
       }
 
@@ -141,24 +153,23 @@ wss.on('connection', (ws) => {
         y: 200,
         dx: 0,
         dy: 0,
-        isMoving: false,
-        activePowerup: null,
-        powerupEndTime: 0,
-        cloudImmunityEndTime: 0
+        powerups: {},
+        isMoving: false
       });
 
+      ws.send(JSON.stringify({ type: 'joined_room', id: ws.id }));
       broadcastRoomUpdate(r);
     } else if (data.type === 'request_start' && room) {
       if (room.hostId === ws.id && room.state === 'lobby') {
         room.state = 'playing';
-        room.timer = 180;
+        room.timer = room.timer || 180;
         
         let i = 0;
         room.players.forEach(p => {
           p.score = 0;
           p.x = 200 + (i * 200);
           p.y = 350;
-          p.activePowerup = null;
+          p.powerups = {};
           i++;
         });
 
@@ -176,9 +187,7 @@ wss.on('connection', (ws) => {
             dx: 0,
             dy: 0,
             isMoving: false,
-            activePowerup: null,
-            powerupEndTime: 0,
-            cloudImmunityEndTime: 0,
+            powerups: {},
             targetX: 600,
             targetY: 350
           });
@@ -191,6 +200,40 @@ wss.on('connection', (ws) => {
         
         room.lastTime = Date.now();
         room.tickInterval = setInterval(() => gameTick(room), TICK_MS);
+      }
+    } else if (data.type === 'update_settings' && room) {
+      if (room.hostId === ws.id && room.state === 'lobby') {
+        if (data.settings.roundTime) room.timer = data.settings.roundTime;
+        if (data.settings.maxPlayers) {
+          room.maxPlayers = data.settings.maxPlayers;
+          // KICK LOGIC: If the host reduces maxPlayers below current count, kick the most recently joined players.
+          const pArr = Array.from(room.players.values());
+          if (pArr.length > room.maxPlayers) {
+            for (let i = room.maxPlayers; i < pArr.length; i++) {
+               const pk = pArr[i];
+               if (pk.ws) {
+                 pk.ws.send(JSON.stringify({ type: 'error', message: 'You were kicked. The host reduced the max player count.' }));
+                 pk.ws.close();
+               }
+            }
+          }
+        }
+        broadcastRoomUpdate(room);
+      }
+    } else if (data.type === 'update_player' && room && room.state === 'lobby') {
+      const p = room.players.get(ws.id);
+      if (p) {
+        if (data.name) {
+          let playerName = data.name.substring(0, 12);
+          let nameCount = 1;
+          const originalName = playerName;
+          while (Array.from(room.players.values()).some(pl => pl.id !== ws.id && pl.name === playerName)) {
+            playerName = `${originalName}${nameCount++}`;
+          }
+          p.name = playerName;
+        }
+        if (data.color) p.color = data.color;
+        broadcastRoomUpdate(room);
       }
     } else if (data.type === 'input' && room && room.state === 'playing') {
       const p = room.players.get(ws.id);
@@ -217,6 +260,28 @@ wss.on('connection', (ws) => {
         broadcast(room, { type: 'menu_broadcast', action: 'quit', playerName: room.players.get(ws.id)?.name || 'Someone' });
         ws.close(); 
       }
+    } else if (data.type === 'play_again' && room && room.state === 'ended') {
+      if (room.hostId === ws.id) {
+        room.state = 'lobby';
+        // RESTART LOGIC: Only retain players who explicitly clicked 'Play Again' (waitingNext = true).
+        // Kick anyone who was idling on the end screen to prevent AFK players from filling up lobbies.
+        for (const p of room.players.values()) {
+           if (p.id !== room.hostId && !p.waitingNext) {
+             if (p.ws) {
+                p.ws.send(JSON.stringify({ type: 'error', message: 'You were removed because you did not choose to play again.' }));
+                p.ws.close();
+             }
+           } else {
+             p.waitingNext = false;
+           }
+        }
+        broadcastRoomUpdate(room);
+        broadcast(room, { type: 'room_recreated' });
+      }
+    } else if (data.type === 'wait_next' && room && room.state === 'ended') {
+      // PLAY AGAIN LOGIC: Mark this player as wanting to join the next match.
+      const p = room.players.get(ws.id);
+      if (p) p.waitingNext = true;
     }
   });
 
@@ -233,10 +298,19 @@ wss.on('connection', (ws) => {
           rooms.delete(ws.roomId);
         } else {
           if (room.hostId === ws.id) {
-            room.hostId = Array.from(room.players.values()).find(pl => pl.ws)?.id;
+            if (room.state === 'ended') {
+              broadcast(room, { type: 'error', message: 'Host left the game. Room closed.' });
+              room.players.forEach(p => { if (p.ws) p.ws.close(); });
+              rooms.delete(ws.roomId);
+            } else {
+              room.hostId = Array.from(room.players.values()).find(pl => pl.ws)?.id;
+              if (room.state === 'lobby') broadcastRoomUpdate(room);
+              else if (room.players.size < 2) endGame(room);
+            }
+          } else {
+            if (room.state === 'lobby') broadcastRoomUpdate(room);
+            else if (room.players.size < 2 && room.state === 'playing') endGame(room);
           }
-          if (room.state === 'lobby') broadcastRoomUpdate(room);
-          else if (room.players.size < 2) endGame(room);
         }
       }
     }
@@ -295,10 +369,10 @@ function gameTick(room) {
   }
 
   const playerCount = Array.from(room.players.values()).filter(p => p.ws).length;
-  if (Math.random() < 0.6 * playerCount * dt) {
+  if (Math.random() < 0.3 * playerCount * dt) {
     spawnEmber(room);
   }
-  if (Math.random() < 0.01) {
+  if (Math.random() < 0.005) {
     spawnPowerup(room);
   }
 
@@ -310,7 +384,7 @@ function gameTick(room) {
       }
       
       for (const p of room.players.values()) {
-        if (p.activePowerup === 'magnet' && now < p.powerupEndTime) {
+        if (p.powerups.magnet && p.powerups.magnet > now) {
           const dist = Math.hypot(p.x - e.x, p.y - e.y);
           if (dist < 120 && dist > 0) {
             e.x += ((p.x - e.x) / dist) * 250 * dt;
@@ -348,36 +422,39 @@ function gameTick(room) {
       }
     }
 
-    if (p.activePowerup && now >= p.powerupEndTime) {
-      p.activePowerup = null;
-    }
-
-    let speedModifier = 1.0;
-    if (p.activePowerup === 'bolt') speedModifier = 1.6;
-
     let cloudSlow = false;
     for (const e of room.entities.values()) {
       if (e.type === 'cloud' && checkAABB(p.x, p.y, 40, 40, e.x, e.y, 72, 48)) {
-        cloudSlow = true;
-        if (now > p.cloudImmunityEndTime) {
-          if (p.activePowerup === 'shield') {
-            p.activePowerup = null; 
+        if (!p.cloudImmunityEndTime || now > p.cloudImmunityEndTime) {
+          if (p.powerups.shield && p.powerups.shield > now) {
+            delete p.powerups.shield;
             p.cloudImmunityEndTime = now + 1500; 
           } else {
             p.score = Math.max(0, p.score - 5);
             p.cloudImmunityEndTime = now + 1500;
           }
         }
+        cloudSlow = true;
       }
     }
     
-    if (cloudSlow && now <= p.cloudImmunityEndTime && p.activePowerup !== 'shield') {
-      speedModifier *= 0.5;
+    // Process Powerups
+    let baseSpeed = 220;
+    if (p.powerups.bolt && p.powerups.bolt > now) {
+      baseSpeed = 350;
+    } else if (p.powerups.bolt) {
+      delete p.powerups.bolt;
+    }
+    
+    if (p.powerups.shield && p.powerups.shield <= now) delete p.powerups.shield;
+    if (p.powerups.magnet && p.powerups.magnet <= now) delete p.powerups.magnet;
+
+    if (cloudSlow && (!p.powerups.shield || p.powerups.shield <= now)) {
+      baseSpeed *= 0.5;
     }
 
-    const speed = 220 * speedModifier;
-    p.x += p.dx * speed * dt;
-    p.y += p.dy * speed * dt;
+    p.x += p.dx * baseSpeed * dt;
+    p.y += p.dy * baseSpeed * dt;
     p.isMoving = p.dx !== 0 || p.dy !== 0;
 
     p.x = Math.max(30, Math.min(ARENA_WIDTH - 30, p.x));
@@ -389,12 +466,26 @@ function gameTick(room) {
           p.score += 10;
           room.entities.delete(id);
         }
+      } else if (e.type === 'cloud') {
+        if (checkAABB(p.x, p.y, 30, 30, e.x, e.y, 40, 40)) {
+          if (p.powerups.shield && p.powerups.shield > now) {
+            // SHIELD LOGIC: Destroy the cloud and consume the shield
+            delete p.powerups.shield;
+            room.entities.delete(id);
+          } else {
+            p.score = Math.max(0, p.score - 5);
+            room.entities.delete(id);
+          }
+        }
       } else if (e.type.startsWith('powerup-')) {
         if (checkAABB(p.x, p.y, 40, 40, e.x, e.y, 32, 32)) {
-          p.activePowerup = e.type.replace('powerup-', '');
-          p.powerupEndTime = now + 5000;
-          if (p.activePowerup === 'shield') p.powerupEndTime = now + 9999999;
+          // MULTIPLE POWERUPS LOGIC: Set expiration timestamp per-powerup type.
+          const type = e.type.replace('powerup-', '');
+          p.powerups[type] = now + 5000;
+          if (type === 'shield') p.powerups[type] = now + 9999999;
           room.entities.delete(id);
+          // AUDIO EVENT: Tell specifically this player's client to play the powerup sound
+          if (p.ws) p.ws.send(JSON.stringify({ type: 'powerup_pickup', powerup: type }));
         }
       }
     }
@@ -412,7 +503,7 @@ function gameTick(room) {
       dx: p.dx,
       isMoving: p.isMoving,
       score: p.score,
-      activePowerup: p.activePowerup
+      activePowerups: Object.keys(p.powerups)
     })),
     entities: Array.from(room.entities.values()).map(e => ({
       id: e.id,

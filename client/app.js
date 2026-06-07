@@ -7,13 +7,8 @@ class GameApp {
       game: document.getElementById('screen-game'),
       end: document.getElementById('screen-end')
     };
-    this.audio = {
-      start: new Audio('./assets/audio/start.mp3'),
-      pickup: new Audio('./assets/audio/pickup.mp3'),
-      powerup: new Audio('./assets/audio/powerup.mp3'),
-      cloud_hit: new Audio('./assets/audio/cloud_hit.mp3'),
-      win: new Audio('./assets/audio/win.mp3')
-    };
+    this.sound = new SoundEngine();
+    this.soundEnabled = localStorage.getItem('dorm-dash-volume') !== '0';
     this.soundEnabled = localStorage.getItem('dorm-dash-volume') !== '0';
     
     // UI Elements
@@ -26,6 +21,7 @@ class GameApp {
       btnCopyLink: document.getElementById('btn-copy-link'),
       btnCloseInvite: document.getElementById('btn-close-invite'),
       btnStartGame: document.getElementById('btn-start-game'),
+      btnLeaveLobby: document.getElementById('btn-leave-lobby'),
       btnMenu: document.getElementById('btn-menu'),
       btnResume: document.getElementById('btn-resume'),
       btnQuit: document.getElementById('btn-quit'),
@@ -37,6 +33,8 @@ class GameApp {
       lobbyRoomCode: document.getElementById('lobby-room-code'),
       lobbyInviteLink: document.getElementById('lobby-invite-link'),
       inviteBar: document.getElementById('invite-bar'),
+      selectRoundTime: document.getElementById('select-round-time'),
+      selectMaxPlayers: document.getElementById('select-max-players'),
       hudScoreboard: document.getElementById('hud-scoreboard'),
       hudTimer: document.getElementById('hud-timer'),
       actionBanner: document.getElementById('action-banner'),
@@ -105,25 +103,66 @@ class GameApp {
       });
     });
 
-    const connectAndJoin = () => {
+    this.connectAndJoin = (intent) => {
       const name = this.els.nameInput.value.trim() || 'Camper';
-      const room = this.els.roomInput.value.trim() || 'ABCD';
+      let room = this.els.roomInput.value.trim().toUpperCase();
+
+      if (intent === 'join' && !room) {
+        this.showBanner('Please enter a room code to join.');
+        return;
+      }
+      if (intent === 'create') {
+        room = Math.random().toString(36).substring(2, 6).toUpperCase();
+        this.els.roomInput.value = room;
+      }
+
       this.state.roomId = room;
       
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}`;
       this.ws = new WsClient(wsUrl, this.onMessage.bind(this));
       this.ws.connect().then(() => {
-        this.ws.joinRoom(room, name, this.state.localColor);
-        this.showScreen('lobby');
+        this.ws.joinRoom(room, name, this.state.localColor, intent);
+      }).catch(() => {
+        this.showBanner('Failed to connect to the server.');
       });
     };
 
-    this.els.btnCreate.addEventListener('click', connectAndJoin);
-    this.els.btnJoin.addEventListener('click', connectAndJoin);
+    this.els.btnCreate.addEventListener('click', () => this.connectAndJoin('create'));
+    this.els.btnJoin.addEventListener('click', () => this.connectAndJoin('join'));
     
     this.els.btnStartGame.addEventListener('click', () => {
       if (this.state.isHost) this.ws.requestStart();
+    });
+
+    this.els.btnLeaveLobby.addEventListener('click', () => {
+      if (this.ws) this.ws.disconnect();
+      this.showScreen('join');
+    });
+
+    // Settings
+    const lobbyTimer = document.getElementById('lobby-setting-timer');
+    if (lobbyTimer) lobbyTimer.addEventListener('change', (e) => {
+      if (this.state.isHost) this.ws.send({ type: 'update_settings', settings: { roundTime: parseInt(e.target.value) } });
+    });
+    
+    const lobbyPlayers = document.getElementById('lobby-setting-players');
+    if (lobbyPlayers) lobbyPlayers.addEventListener('change', (e) => {
+      if (this.state.isHost) this.ws.send({ type: 'update_settings', settings: { maxPlayers: parseInt(e.target.value) } });
+    });
+
+    // Lobby Customization
+    const lobbyName = document.getElementById('lobby-input-name');
+    if (lobbyName) lobbyName.addEventListener('change', (e) => {
+      this.ws.send({ type: 'update_player', name: e.target.value });
+    });
+    
+    document.querySelectorAll('.l-color-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.l-color-btn').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        this.ws.send({ type: 'update_player', color: e.currentTarget.dataset.color });
+      });
     });
 
     this.els.btnCloseInvite.addEventListener('click', () => {
@@ -147,7 +186,14 @@ class GameApp {
       this.ws.sendMenuAction('resume');
       this.els.menuOverlay.classList.add('hidden');
     });
-    this.els.btnQuit.addEventListener('click', () => this.ws.sendMenuAction('quit'));
+    this.els.btnQuit.addEventListener('click', () => {
+      if (this.ws) {
+        this.ws.sendMenuAction('quit');
+        this.ws.disconnect();
+      }
+      this.els.menuOverlay.classList.add('hidden');
+      this.showScreen('join');
+    });
 
     window.addEventListener('keydown', (e) => {
       this.state.input.keys.add(e.code);
@@ -177,8 +223,22 @@ class GameApp {
       });
     });
 
-    this.els.btnPlayAgain.addEventListener('click', () => window.location.reload());
-    this.els.btnHome.addEventListener('click', () => window.location.reload());
+    // Wait/Play Again Flow
+    this.els.btnPlayAgain.addEventListener('click', () => {
+      this.els.btnPlayAgain.blur();
+      if (this.state.isHost) {
+        this.ws.send({ type: 'play_again' });
+      } else {
+        this.ws.send({ type: 'wait_next' });
+        this.els.btnPlayAgain.classList.add('hidden');
+        document.getElementById('wait-host-msg').classList.remove('hidden');
+      }
+    });
+
+    this.els.btnHome.addEventListener('click', () => {
+      if (this.ws) this.ws.disconnect();
+      this.showScreen('join');
+    });
   }
 
   updateSoundIcon() {
@@ -188,9 +248,8 @@ class GameApp {
   }
 
   playSound(name) {
-    if (this.soundEnabled && this.audio[name]) {
-      this.audio[name].currentTime = 0;
-      this.audio[name].play().catch(() => {});
+    if (this.soundEnabled) {
+      this.sound.play(name);
     }
   }
 
@@ -200,11 +259,17 @@ class GameApp {
     if (name !== 'end') this.els.confettiContainer.innerHTML = '';
   }
 
-  showBanner(text) {
-    this.els.actionBannerText.textContent = text;
-    this.els.actionBanner.classList.remove('hidden');
+  showBanner(text, type='error') {
+    // TOAST NOTIFICATION: Creates a new element dynamically, animates it in, and removes it after 4s
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = text;
+    container.appendChild(toast);
     setTimeout(() => {
-      this.els.actionBanner.classList.add('hidden');
+      toast.style.animation = 'toast-fade 0.3s forwards';
+      setTimeout(() => toast.remove(), 300);
     }, 4000);
   }
 
@@ -230,10 +295,52 @@ class GameApp {
   onMessage(dataStr) {
     const data = JSON.parse(dataStr);
     switch (data.type) {
+      case 'error':
+      case 'join_error':
+        this.showBanner(data.message, 'error');
+        if (this.ws) this.ws.disconnect();
+        this.showScreen('join');
+        break;
+
+      case 'error':
+        this.showBanner(data.message, 'error');
+        break;
+
+      case 'room_recreated':
+        this.showScreen('lobby');
+        break;
+
+      case 'joined_room':
+        this.state.localPlayerId = data.id;
+        this.showScreen('lobby');
+        break;
+
       case 'room_update':
         this.state.players = data.players;
+        const myPlayer = data.players.find(p => p.id === this.state.localPlayerId);
+        
+        const lobbyName = document.getElementById('lobby-input-name');
+        if (lobbyName && myPlayer) lobbyName.value = myPlayer.name;
+        
+        if (myPlayer) {
+          document.querySelectorAll('.l-color-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.color === myPlayer.color);
+          });
+        }
+
         this.state.isHost = data.players[0].id === (this.ws.mockServer ? 'p1' : this.state.localPlayerId);
         if (this.ws.mockServer) this.state.localPlayerId = 'p1';
+
+        if (this.state.isHost) {
+          document.getElementById('lobby-host-settings').classList.remove('hidden');
+          document.getElementById('btn-start-game').classList.remove('disabled');
+          document.getElementById('lobby-waiting-msg').classList.add('hidden');
+        } else {
+          document.getElementById('lobby-host-settings').classList.add('hidden');
+          document.getElementById('btn-start-game').classList.add('disabled');
+          document.getElementById('lobby-waiting-msg').classList.remove('hidden');
+        }
+
         this.els.lobbyRoomCode.textContent = this.state.roomId;
         this.els.lobbyInviteLink.textContent = `dormdash.game/${this.state.roomId}`;
         this.els.lobbyPlayers.innerHTML = '';
@@ -243,7 +350,11 @@ class GameApp {
           dot.style.backgroundColor = this.playerColors[p.color] || this.playerColors.green;
           this.els.lobbyPlayers.appendChild(dot);
         });
-        if (this.state.isHost) this.els.btnStartGame.classList.remove('disabled');
+
+        if (data.settings) {
+          if (data.settings.roundTime) this.els.selectRoundTime.value = data.settings.roundTime;
+          if (data.settings.maxPlayers) this.els.selectMaxPlayers.value = data.settings.maxPlayers;
+        }
         break;
 
       case 'game_start':
@@ -260,9 +371,26 @@ class GameApp {
         data.players.forEach(newP => {
           const oldP = oldPlayers.get(newP.id);
           if (oldP) {
+            newP.name = oldP.name;
+            newP.color = oldP.color;
+            if (!Number.isNaN(oldP.displayX)) newP.displayX = oldP.displayX;
+            if (!Number.isNaN(oldP.displayY)) newP.displayY = oldP.displayY;
             if (newP.score > oldP.score) this.playSound('pickup');
             if (newP.score < oldP.score) this.playSound('cloud_hit');
-            if (newP.activePowerup && !oldP.activePowerup) this.playSound('powerup');
+          }
+          if (newP.displayX === undefined) newP.displayX = newP.x;
+          if (newP.displayY === undefined) newP.displayY = newP.y;
+        });
+
+        const oldEntities = new Map(this.state.entities.map(e => [e.id, e]));
+        data.entities.forEach(newE => {
+          const oldE = oldEntities.get(newE.id);
+          if (oldE) {
+            newE.displayX = oldE.displayX;
+            newE.displayY = oldE.displayY;
+          } else {
+            newE.displayX = newE.x;
+            newE.displayY = newE.y;
           }
         });
 
@@ -280,20 +408,20 @@ class GameApp {
         
         const local = data.players.find(p => p.id === this.state.localPlayerId);
         if (local) {
+          // MULTIPLE POWERUPS UI: Turn off all slots, then turn on the ones currently active
           document.querySelectorAll('.hud-slot').forEach(s => s.classList.remove('active'));
-          if (local.activePowerup) {
-            const slot = document.getElementById(`slot-${local.activePowerup}`);
-            if (slot) slot.classList.add('active');
-          }
-
-          const dist = Math.hypot(this.localTargetPos.x - local.x, this.localTargetPos.y - local.y);
-          if (dist > 6) {
-             this.localTargetPos.x = local.x;
-             this.localTargetPos.y = local.y;
-             this.localCurrentPos.x += (local.x - this.localCurrentPos.x) * 0.5;
-             this.localCurrentPos.y += (local.y - this.localCurrentPos.y) * 0.5;
+          if (local.activePowerups) {
+            local.activePowerups.forEach(pow => {
+              const slot = document.getElementById(`slot-${pow}`);
+              if (slot) slot.classList.add('active');
+            });
           }
         }
+        break;
+
+      case 'powerup_pickup':
+        // AUDIO EVENT: Independent event fired by server specifically for the picker-upper
+        this.playSound('powerup');
         break;
 
       case 'menu_broadcast':
@@ -315,14 +443,15 @@ class GameApp {
         this.playSound('win');
         
         this.els.winnerName.textContent = 'Game Over';
-        this.els.finalScoreboard.innerHTML = '';
+        const finalSb = document.getElementById('end-scoreboard');
+        if (finalSb) finalSb.innerHTML = '';
         Object.entries(data.scores).forEach(([id, score]) => {
           const p = this.state.players.find(pl => pl.id === id);
-          if (p) {
+          if (p && finalSb) {
             const row = document.createElement('div');
             row.className = 'final-row';
             row.innerHTML = `<span>${p.name}</span><span>${score}</span>`;
-            this.els.finalScoreboard.appendChild(row);
+            finalSb.appendChild(row);
             if (id === data.winnerId) this.els.winnerName.textContent = `${p.name} Wins!`;
           }
         });
@@ -363,6 +492,7 @@ class GameApp {
   }
 
   startInputLoop() {
+    let lastDx = null, lastDy = null;
     this.inputInterval = setInterval(() => {
       if (this.state.gameState !== 'playing') return;
       let dx = 0, dy = 0;
@@ -375,10 +505,9 @@ class GameApp {
         const len = Math.sqrt(dx*dx + dy*dy); dx /= len; dy /= len;
       }
       
-      if (dx !== 0 || dy !== 0) {
-        this.localTargetPos.x += dx * 8;
-        this.localTargetPos.y += dy * 8;
+      if (dx !== lastDx || dy !== lastDy) {
         this.ws.sendInput(dx, dy, false);
+        lastDx = dx; lastDy = dy;
       }
     }, 50);
   }
@@ -440,8 +569,13 @@ class GameApp {
   }
 
   buildPowerupDOM(node, type) {
-    const powerupName = type.replace('powerup-', '');
-    node.innerHTML = `<img src="./assets/sprites/powerup-${powerupName}.png" width="32" height="32" class="powerup-pulse" style="transform:translate(-50%, -50%)">`;
+    if (type === 'powerup-bolt') {
+      node.innerHTML = `<svg viewBox="0 0 24 24" width="32" height="32" fill="#FFD700" style="transform:translate(-50%, -50%); filter: drop-shadow(0 0 8px #FFD700);"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>`;
+    } else if (type === 'powerup-shield') {
+      node.innerHTML = `<svg viewBox="0 0 24 24" width="32" height="32" fill="#90CAF9" style="transform:translate(-50%, -50%); filter: drop-shadow(0 0 8px #90CAF9);"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>`;
+    } else if (type === 'powerup-magnet') {
+      node.innerHTML = `<svg viewBox="0 0 24 24" width="32" height="32" fill="#CFD8DC" style="transform:translate(-50%, -50%); filter: drop-shadow(0 0 8px #CFD8DC);"><path d="M12 2C8.13 2 5 5.13 5 9v6h4V9c0-1.66 1.34-3 3-3s3 1.34 3 3v6h4V9c0-3.87-3.13-7-7-7z"/></svg>`;
+    }
   }
 
   gameLoop(timestamp) {
@@ -451,22 +585,32 @@ class GameApp {
     }
     
     const renderList = [];
-    this.localCurrentPos.x += (this.localTargetPos.x - this.localCurrentPos.x) * 0.3;
-    this.localCurrentPos.y += (this.localTargetPos.y - this.localCurrentPos.y) * 0.3;
 
     this.state.players.forEach(p => {
-      let x = p.x, y = p.y, isMoving = p.isMoving;
+      if (p.x === undefined || p.y === undefined) return;
+      
+      if (p.displayX === undefined || Number.isNaN(p.displayX)) p.displayX = p.x;
+      if (p.displayY === undefined || Number.isNaN(p.displayY)) p.displayY = p.y;
+      
+      p.displayX += (p.x - p.displayX) * 0.25;
+      p.displayY += (p.y - p.displayY) * 0.25;
+      
+      let x = p.displayX;
+      let y = p.displayY;
+      let isMoving = p.isMoving;
       let dx = p.dx || 0;
-      if (p.id === this.state.localPlayerId) {
-         dx = this.localTargetPos.x - this.localCurrentPos.x;
-         x = this.localCurrentPos.x; y = this.localCurrentPos.y;
-         isMoving = (Math.abs(dx) > 1 || Math.abs(this.localTargetPos.y - this.localCurrentPos.y) > 1);
-      }
+      
       renderList.push({ id: 'p_' + p.id, type: 'camper', color: p.color, name: p.name, x, y, isMoving, dx });
     });
 
     this.state.entities.forEach(e => {
-      renderList.push({ id: e.id, type: e.type, x: e.x, y: e.y });
+      if (e.displayX === undefined) e.displayX = e.x;
+      if (e.displayY === undefined) e.displayY = e.y;
+      
+      e.displayX += (e.x - e.displayX) * 0.25;
+      e.displayY += (e.y - e.displayY) * 0.25;
+      
+      renderList.push({ id: e.id, type: e.type, x: e.displayX, y: e.displayY });
     });
 
     const currentActiveIds = new Set(renderList.map(item => item.id));
@@ -504,6 +648,70 @@ class GameApp {
     });
 
     this.rafId = requestAnimationFrame((t) => this.gameLoop(t));
+  }
+}
+
+class SoundEngine {
+  constructor() {
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  play(type) {
+    if (!this.ctx) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    
+    if (type === 'start') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(440, t);
+      osc.frequency.setValueAtTime(554, t + 0.1);
+      osc.frequency.setValueAtTime(659, t + 0.2);
+      osc.frequency.setValueAtTime(880, t + 0.3);
+      gain.gain.setValueAtTime(0.1, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.6);
+      osc.start(t);
+      osc.stop(t + 0.6);
+    } else if (type === 'pickup') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, t);
+      osc.frequency.exponentialRampToValueAtTime(1760, t + 0.1);
+      gain.gain.setValueAtTime(0.1, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+      osc.start(t);
+      osc.stop(t + 0.15);
+    } else if (type === 'powerup') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(440, t);
+      osc.frequency.linearRampToValueAtTime(880, t + 0.2);
+      gain.gain.setValueAtTime(0.1, t);
+      gain.gain.linearRampToValueAtTime(0.01, t + 0.3);
+      osc.start(t);
+      osc.stop(t + 0.3);
+    } else if (type === 'cloud_hit') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(150, t);
+      osc.frequency.exponentialRampToValueAtTime(50, t + 0.2);
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+      osc.start(t);
+      osc.stop(t + 0.3);
+    } else if (type === 'win') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(523, t);
+      osc.frequency.setValueAtTime(659, t + 0.15);
+      osc.frequency.setValueAtTime(784, t + 0.3);
+      osc.frequency.setValueAtTime(1046, t + 0.45);
+      gain.gain.setValueAtTime(0.1, t);
+      gain.gain.linearRampToValueAtTime(0.01, t + 1);
+      osc.start(t);
+      osc.stop(t + 1);
+    }
   }
 }
 

@@ -81,11 +81,19 @@
           </button>
         </div>
 
-        <label class="field-label" for="input-room">Room Code</label>
-        <input type="text" id="input-room" class="field field-mono" placeholder="ABCD" maxlength="8" autocomplete="off">
+          <!-- Join Existing Room -->
+          <div class="input-group" style="margin-top: 20px;">
+            <label class="field-label">Join Existing Room</label>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" id="input-room" class="field field-mono" placeholder="Code (e.g. ABCD)" maxlength="4" style="text-transform: uppercase; flex: 1;">
+              <button id="btn-join-room" class="btn btn-green" style="flex: 1; padding: 10px;">Join Room</button>
+            </div>
+          </div>
+          
+          <div style="text-align: center; margin: 15px 0; color: #888; font-size: 14px; font-weight: bold;">- OR -</div>
 
-        <button id="btn-create-room" class="btn btn-orange btn-block">Create Room</button>
-        <button id="btn-join-room"   class="btn btn-green  btn-block">Join Room</button>
+          <!-- Create New Room -->
+          <button id="btn-create-room" class="btn btn-orange btn-block" style="margin-top: 10px;">Create New Room</button>
       </div>
     </div>
 
@@ -144,24 +152,41 @@
         <!-- Settings -->
         <div class="lobby-settings">
           <div class="setting-row">
-            <label>Round Time</label>
-            <select id="select-round-time" class="setting-select" disabled>
-              <option value="60">1 Minute</option>
-              <option value="120">2 Minutes</option>
-              <option value="180" selected>3 Minutes</option>
-            </select>
+            <label>Player Name</label>
+            <input type="text" id="lobby-input-name" class="setting-select" maxlength="12" style="width: 140px;">
           </div>
           <div class="setting-row">
-            <label>Max Players</label>
-            <select id="select-max-players" class="setting-select" disabled>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4" selected>4</option>
-            </select>
+            <label>Color</label>
+            <div class="lobby-color-picker">
+              <button class="l-color-btn" data-color="green" style="background: #4CAF50;"></button>
+              <button class="l-color-btn" data-color="red" style="background: #F44336;"></button>
+              <button class="l-color-btn" data-color="blue" style="background: #2196F3;"></button>
+              <button class="l-color-btn" data-color="yellow" style="background: #FFC107;"></button>
+            </div>
+          </div>
+          
+          <div id="lobby-host-settings" class="hidden">
+            <div class="setting-row">
+              <label>Round Timer</label>
+              <select id="lobby-setting-timer" class="setting-select">
+                <option value="60">1 Minute</option>
+                <option value="120">2 Minutes</option>
+                <option value="180" selected>3 Minutes</option>
+                <option value="300">5 Minutes</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <label>Max Players</label>
+              <select id="lobby-setting-players" class="setting-select">
+                <option value="2">2 Players</option>
+                <option value="4" selected>4 Players</option>
+                <option value="8">8 Players</option>
+              </select>
+            </div>
           </div>
         </div>
-
         <button id="btn-start-game" class="btn btn-orange btn-block btn-lg disabled">START GAME</button>
+        <button id="btn-leave-lobby" class="btn btn-outline btn-block" style="margin-top: 10px;">Leave Room</button>
         <div id="lobby-waiting-msg" class="lobby-wait-msg hidden">Waiting for host to start…</div>
       </div>
     </div>
@@ -234,16 +259,21 @@
     <div class="hud-top">
       <div id="hud-scoreboard" class="hud-scores"></div>
       <div id="hud-timer" class="hud-timer">03:00</div>
-      <div id="hud-powerups" class="hud-slots">
-        <div class="hud-slot" id="slot-bolt">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="#FFD700"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>
+      <div class="hud-right-group">
+        <div id="hud-powerups" class="hud-slots">
+          <div class="hud-slot" id="slot-bolt">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="#FFD700"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>
+          </div>
+          <div class="hud-slot" id="slot-shield">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="#90CAF9"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+          </div>
+          <div class="hud-slot" id="slot-magnet">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="#CFD8DC"><path d="M12 2C8.13 2 5 5.13 5 9v6h4V9c0-1.66 1.34-3 3-3s3 1.34 3 3v6h4V9c0-3.87-3.13-7-7-7z"/></svg>
+          </div>
         </div>
-        <div class="hud-slot" id="slot-shield">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="#90CAF9"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
-        </div>
-        <div class="hud-slot" id="slot-magnet">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="#CFD8DC"><path d="M12 2C8.13 2 5 5.13 5 9v6h4V9c0-1.66 1.34-3 3-3s3 1.34 3 3v6h4V9c0-3.87-3.13-7-7-7z"/></svg>
-        </div>
+        <button id="btn-menu" class="hud-menu-btn" aria-label="Menu">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+        </button>
       </div>
     </div>
 
@@ -267,13 +297,6 @@
         <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6-1.41-1.41z"/></svg>
       </button>
     </div>
-
-    <!-- Menu button (bottom-right) -->
-    <button id="btn-menu" class="hud-menu-btn" aria-label="Menu">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-        <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94zM12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
-      </svg>
-    </button>
 
     <!-- Pause Menu Overlay -->
     <div id="menu-overlay" class="pause-overlay hidden">
@@ -299,9 +322,11 @@
         <svg viewBox="0 0 24 24" width="56" height="56" fill="#FFD700"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>
       </div>
       <h1 id="winner-name" class="winner-title">Loading…</h1>
-      <div id="final-scoreboard" class="final-sb"></div>
+      <div class="final-sb" id="end-scoreboard"></div>
+      
+      <div id="wait-host-msg" class="hidden" style="margin-bottom: 20px; font-weight: bold; color: #8B5E3C;">Waiting for host to restart...</div>
       <button id="btn-play-again" class="btn btn-orange btn-block">Play Again</button>
-      <button id="btn-home"       class="btn btn-outline btn-block">Back to Menu</button>
+      <button id="btn-home"       class="btn btn-outline btn-block">Leave Game</button>
     </div>
   </div>
 

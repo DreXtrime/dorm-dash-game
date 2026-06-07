@@ -35,7 +35,7 @@ Players join a room, select a colored avatar, and enter a forest camp compound w
 
 ### End of Game
 - When the timer expires, the screen shifts to the final scoreboard, crowning the winner with a shower of confetti!
-- You can choose to play again or return to the main menu.
+- Players who click **Play Again** will enter a waiting state. If the Host clicks **Play Again**, everyone who chose to wait will be seamlessly dropped back into the Lobby for another round!
 
 ![End Screen](./docs/images/end_screen.png)
 

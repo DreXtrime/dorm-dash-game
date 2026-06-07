@@ -5,7 +5,7 @@ class WsClient {
     this.url = url;
     this.onMessageCallback = onMessageCallback;
     this.ws = null;
-    this.mockServer = null;
+    this.intentionalClose = false;
   }
 
   connect() {
@@ -23,8 +23,10 @@ class WsClient {
         this.ws.onerror = (err) => reject(err);
         this.ws.onclose = () => {
           console.log('WebSocket closed');
-          const banner = document.getElementById('offline-banner');
-          if (banner) banner.classList.remove('hidden');
+          if (!this.intentionalClose) {
+            const banner = document.getElementById('offline-banner');
+            if (banner) banner.classList.remove('hidden');
+          }
         };
       } catch (err) {
         reject(err);
@@ -40,9 +42,13 @@ class WsClient {
       this.ws.send(payload);
     }
   }
-  
-  joinRoom(roomId, playerName, color) {
-    this.send({ type: 'join_room', roomId, playerName, color });
+  disconnect() {
+    this.intentionalClose = true;
+    if (this.ws) this.ws.close();
+  }
+
+  joinRoom(roomId, playerName, color, intent) {
+    this.send({ type: 'join_room', roomId, playerName, color, intent });
   }
   
   requestStart() {
