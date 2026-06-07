@@ -50,24 +50,25 @@ The application is structured into two primary domains to ensure a clean separat
 
 ## Local Development Setup
 
-### 1. Running the Game Locally
-You can serve the static frontend using any local web server. The mock server will automatically handle the game state if a live backend is not provided.
-```bash
-cd client
-python3 -m http.server 8000
-# or
-npx serve .
-```
-Navigate to `http://localhost:8000` in your browser. 
+The backend has been fully implemented using Node.js. It now handles both the WebSocket real-time simulation and serving the static frontend files!
 
-### 2. Backend Integration
-When the real backend is ready to be connected, developers must do the following:
-1. In `client/ws-client.js`, toggle `WsClient.isMockMode = false`.
-2. Update the WebSocket connection URL in `client/app.js` to point to the live backend endpoint (e.g., `wss://api.dormdash.game`).
-3. Remove the mock dependencies (`<script src="./ws-mock.js"></script>`) from `client/index.html`.
+### Quick Start
+To start the game, simply run the included run script from the root directory:
+```bash
+./run.sh
+```
+Then navigate your web browser to `http://localhost:3000`.
+
+### Manual Start
+Alternatively, you can start the server manually:
+```bash
+cd server
+npm install
+npm start
+```
 
 ## Backend Implementation Guide
-Backend engineers should refer directly to **`BACKEND_CONTRACT.md`** for the exact WebSocket event schemas. The frontend is entirely "dumb" to game rules—it strictly renders whatever state the server broadcasts. 
+The backend runs an authoritative 20Hz physics simulation for collisions and movement. Backend engineers should refer directly to **`BACKEND_CONTRACT.md`** for the exact WebSocket event schemas. The frontend is entirely "dumb" to game rules—it strictly renders whatever state the server broadcasts. 
 
 The backend is strictly responsible for:
 - **Lobby Management**: Handling `join_room` requests and broadcasting `room_update` state changes.
