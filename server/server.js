@@ -185,8 +185,14 @@ wss.on('connection', (ws) => {
         activePlayers.forEach((p) => {
           p.score = 0;
           p.waitingNext = false;
-          p.x = 40 + ((i % 4) * 25);
-          p.y = 280 + (Math.floor(i / 4) * 40);
+          const spawnPoints = [
+            { x: 400, y: 350 },
+            { x: 800, y: 350 },
+            { x: 400, y: 500 },
+            { x: 800, y: 500 }
+          ];
+          p.x = spawnPoints[i % 4].x;
+          p.y = spawnPoints[i % 4].y;
           p.powerups = {};
           p.isMoving = false;
           i++;
