@@ -402,8 +402,18 @@ function gameTick(room) {
   }
 
   const playerCount = Array.from(room.players.values()).filter(p => p.ws).length;
-  if (Math.random() < 0.3 * playerCount * dt) {
-    spawnEmber(room);
+  const emberCount = Array.from(room.entities.values()).filter(e => e.type === 'ember').length;
+  const maxEmbers = playerCount * 5;
+  
+  if (emberCount < maxEmbers) {
+    if (Math.random() < 0.008) {
+      const burst = Math.floor(Math.random() * 4) + 2;
+      for (let i = 0; i < burst && emberCount + i < maxEmbers; i++) {
+        spawnEmber(room);
+      }
+    } else if (Math.random() < 0.15 * dt * playerCount) {
+      spawnEmber(room);
+    }
   }
   if (Math.random() < 0.005) {
     spawnPowerup(room);
