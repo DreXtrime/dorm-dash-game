@@ -294,7 +294,6 @@ class GameApp {
   onMessage(dataStr) {
     const data = JSON.parse(dataStr);
     switch (data.type) {
-      case 'error':
       case 'join_error':
         this.showBanner(data.message, 'error');
         if (this.ws) this.ws.disconnect();
