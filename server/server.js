@@ -408,11 +408,20 @@ function gameTick(room) {
   }
 
   const playerCount = Array.from(room.players.values()).filter(p => p.ws).length;
-  const emberCount = Array.from(room.entities.values()).filter(e => e.type === 'ember').length;
+  const embers = Array.from(room.entities.values()).filter(e => e.type === 'ember');
+  const emberCount = embers.length;
+  const minEmbers = playerCount * 2;
   const maxEmbers = playerCount * 5;
+
+  if (emberCount < minEmbers) {
+    const needed = minEmbers - emberCount;
+    for (let i = 0; i < needed; i++) {
+    spawnEmber(room);
+    }
+  }
   
   if (emberCount < maxEmbers) {
-    if (Math.random() < 0.008) {
+    if (Math.random() < 0.03) {
       const burst = Math.floor(Math.random() * 4) + 2;
       for (let i = 0; i < burst && emberCount + i < maxEmbers; i++) {
         spawnEmber(room);
