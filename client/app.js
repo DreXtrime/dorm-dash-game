@@ -73,10 +73,6 @@ class GameApp {
   }
 
   init() {
-    // Hide offline banner if mock mode is used
-    if (WsClient.isMockMode) {
-      this.els.offlineBanner.style.display = 'none';
-    }
 
     this.setupEventListeners();
     this.updateSoundIcon();
@@ -327,8 +323,7 @@ class GameApp {
           });
         }
 
-        this.state.isHost = data.players[0].id === (this.ws.mockServer ? 'p1' : this.state.localPlayerId);
-        if (this.ws.mockServer) this.state.localPlayerId = 'p1';
+        this.state.isHost = data.players[0].id === this.state.localPlayerId;
 
         if (this.state.isHost) {
           document.getElementById('lobby-host-settings').classList.remove('hidden');
