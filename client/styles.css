@@ -120,7 +120,29 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 /* ═══════════════════════════════════════
    GAME ARENA BACKGROUND
 ═══════════════════════════════════════ */
-.arena { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #2E7D32; overflow: hidden; }
+.arena-wrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1200px;
+  height: 700px;
+  transform-origin: center center;
+  /* JS will set the scale via inline style */
+}
+
+.arena {
+  width: 1200px;
+  height: 700px;
+  position: relative;
+  overflow: hidden;
+  background: #2E7D32;
+}
+#screen-game {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1B5E20;
+}
 .al { position: absolute; pointer-events: none; }
 
 .al-sky { top: 0; left: 0; width: 100%; height: 28%; background: linear-gradient(180deg, #6BA3C8 0%, #9EC5DE 60%, #B8D9EE 100%); z-index: 0; }
@@ -211,7 +233,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 /* ═══════════════════════════════════════
    PART A — CHARACTER DESIGN
 ═══════════════════════════════════════ */
-.camper { position: relative; width: 56px; height: 88px; margin-left: -28px; margin-top: -66px; }
+.camper { position: relative; width: 56px; height: 88px; margin-top: -66px; }
 
 .shadow { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); width: 36px; height: 8px; background: rgba(0,0,0,0.25); border-radius: 50%; z-index: 1; }
 
@@ -228,7 +250,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 
 .body { position: absolute; top: 46px; left: 50%; transform: translateX(-50%); width: 34px; height: 24px; border-radius: 6px 6px 8px 8px; z-index: 3; }
 .body::before { content:''; position: absolute; top: -3px; left: 50%; transform: translateX(-50%); width: 14px; height: 7px; background: inherit; border-radius: 3px; }
-.body::after { content:''; position: absolute; top: 2px; right: -9px; width: 10px; height: 18px; background: rgba(0,0,0,0.3); border-radius: 3px; border: 1px solid rgba(0,0,0,0.2); }
+/*.body::after { content:''; position: absolute; top: 2px; right: -9px; width: 10px; height: 18px; background: rgba(0,0,0,0.3); border-radius: 3px; border: 1px solid rgba(0,0,0,0.2); }*/
 
 .arm-left, .arm-right { position: absolute; top: 48px; width: 11px; height: 22px; border-radius: 5px 5px 6px 6px; z-index: 2; transform-origin: top center; }
 .arm-left { left: 4px; } .arm-right { right: 4px; }
@@ -248,6 +270,10 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 @keyframes body-bounce { 0%,100% { transform: translateY(0px) translateX(-50%); } 25%,75% { transform: translateY(-3px) translateX(-50%); } }
 @keyframes shadow-pulse { 0%,100% { transform: translateX(-50%) scaleX(1); opacity: 0.25; } 25%,75% { transform: translateX(-50%) scaleX(0.8); opacity: 0.15; } }
 @keyframes blink { 0%,96% { transform: scaleY(1); } 98% { transform: scaleY(0.1); } 100% { transform: scaleY(1); } }
+@keyframes float-up {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-60px) scale(1.3); opacity: 0; }
+}
 
 .camper.walking .leg-left { animation: leg-left-walk 0.42s ease-in-out infinite; }
 .camper.walking .leg-right { animation: leg-right-walk 0.42s ease-in-out infinite; }
@@ -257,7 +283,6 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 .camper.walking .shadow { animation: shadow-pulse 0.42s ease-in-out infinite; }
 .camper.walking .eyes { animation: blink 2s infinite; }
 
-.camper.facing-left { transform: scaleX(-1); }
 .camper.facing-left .player-label { transform: scaleX(-1) translateX(50%); left: auto; right: 50%; }
 
 /* ═══════════════════════════════════════

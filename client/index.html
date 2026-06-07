@@ -126,7 +126,7 @@
 
     <div class="lobby-topbar">
       <span class="lobby-code-label">Room Code: <span id="lobby-room-code" class="code-mono">----</span></span>
-      <button id="btn-copy-link" class="btn btn-orange btn-sm">Copy Link</button>
+      <button id="btn-copy-link" class="btn btn-orange btn-sm">Copy Code</button>
     </div>
 
     <div class="lobby-body">
@@ -175,7 +175,7 @@
               <select id="lobby-setting-players" class="setting-select">
                 <option value="2">2 Players</option>
                 <option value="4" selected>4 Players</option>
-                <option value="8">8 Players</option>
+                <!--<option value="8">8 Players</option>-->
               </select>
             </div>
           </div>
@@ -193,61 +193,63 @@
   <div id="screen-game" class="screen hidden">
 
     <!-- Arena -->
-    <div id="arena" class="arena">
-      <!-- Layer 0: Sky -->
-      <div class="al al-sky"></div>
-      <!-- Layer 1: Distant treeline -->
-      <div class="al al-treeline">
-        <div class="at at-sm"></div><div class="at at-lg"></div><div class="at at-md"></div>
-        <div class="at at-sm"></div><div class="at at-lg"></div><div class="at at-md"></div>
-        <div class="at at-sm"></div><div class="at at-lg"></div><div class="at at-md"></div>
-        <div class="at at-sm"></div><div class="at at-lg"></div><div class="at at-md"></div>
-        <div class="at at-sm"></div><div class="at at-lg"></div>
-      </div>
-      <!-- Layer 1b: Second treeline row -->
-      <div class="al al-treeline2">
-        <div class="at at-md2"></div><div class="at at-lg2"></div><div class="at at-sm2"></div>
-        <div class="at at-md2"></div><div class="at at-lg2"></div><div class="at at-sm2"></div>
-        <div class="at at-md2"></div><div class="at at-lg2"></div><div class="at at-sm2"></div>
-        <div class="at at-md2"></div><div class="at at-lg2"></div>
-      </div>
-      <!-- Layer 2: Grass base -->
-      <div class="al al-grass-base"></div>
-      <!-- Layer 3: Dirt compound -->
-      <div class="al al-dirt"></div>
-      <!-- Layer 4: River -->
-      <div class="al al-river"></div>
-      <!-- Layer 5: Fence -->
-      <div class="al al-fence">
-        <div class="fp"></div><div class="fp"></div><div class="fp"></div><div class="fp"></div>
-        <div class="fp"></div><div class="fp"></div><div class="fp"></div><div class="fp"></div>
-        <div class="fp"></div><div class="fp"></div><div class="fp"></div><div class="fp"></div>
-        <div class="fence-rail"></div>
-      </div>
-      <!-- Layer 6: Rocks -->
-      <div class="al al-rocks">
-        <div class="rg rg1"><div class="rock rk-a"></div><div class="rock rk-b"></div><div class="rock rk-c"></div></div>
-        <div class="rg rg2"><div class="rock rk-a"></div><div class="rock rk-b"></div></div>
-        <div class="rg rg3"><div class="rock rk-a"></div><div class="rock rk-b"></div></div>
-      </div>
-      <!-- Layer 7: Decorative campfire -->
-      <div class="al al-deco-fire">
-        <div class="campfire cf-deco">
-          <div class="cf-base"></div>
-          <div class="cf-log cf-log-1"></div><div class="cf-log cf-log-2"></div><div class="cf-log cf-log-3"></div>
-          <div class="cf-flame-outer"></div><div class="cf-flame-inner"></div><div class="cf-flame-tip"></div>
+    <div class="arena-wrapper">
+        <div id="arena" class="arena">
+        <!-- Layer 0: Sky -->
+        <div class="al al-sky"></div>
+        <!-- Layer 1: Distant treeline -->
+        <div class="al al-treeline">
+            <div class="at at-sm"></div><div class="at at-lg"></div><div class="at at-md"></div>
+            <div class="at at-sm"></div><div class="at at-lg"></div><div class="at at-md"></div>
+            <div class="at at-sm"></div><div class="at at-lg"></div><div class="at at-md"></div>
+            <div class="at at-sm"></div><div class="at at-lg"></div><div class="at at-md"></div>
+            <div class="at at-sm"></div><div class="at at-lg"></div>
         </div>
-      </div>
-      <!-- Layer 8: Foreground grass fringe -->
-      <div class="al al-grass-fore"></div>
-      <!-- Layer 40: Foreground tree overlays -->
-      <div class="al al-fg-trees">
-        <div class="fg-tree fg-tree-l1"></div>
-        <div class="fg-tree fg-tree-l2"></div>
-        <div class="fg-tree fg-tree-r1"></div>
-        <div class="fg-tree fg-tree-r2"></div>
-      </div>
-      <!-- Entity pool lives here — z-index 10-30 -->
+        <!-- Layer 1b: Second treeline row -->
+        <div class="al al-treeline2">
+            <div class="at at-md2"></div><div class="at at-lg2"></div><div class="at at-sm2"></div>
+            <div class="at at-md2"></div><div class="at at-lg2"></div><div class="at at-sm2"></div>
+            <div class="at at-md2"></div><div class="at at-lg2"></div><div class="at at-sm2"></div>
+            <div class="at at-md2"></div><div class="at at-lg2"></div>
+        </div>
+        <!-- Layer 2: Grass base -->
+        <div class="al al-grass-base"></div>
+        <!-- Layer 3: Dirt compound -->
+        <div class="al al-dirt"></div>
+        <!-- Layer 4: River -->
+        <!--<div class="al al-river"></div>-->
+        <!-- Layer 5: Fence -->
+        <div class="al al-fence">
+            <div class="fp"></div><div class="fp"></div><div class="fp"></div><div class="fp"></div>
+            <div class="fp"></div><div class="fp"></div><div class="fp"></div><div class="fp"></div>
+            <div class="fp"></div><div class="fp"></div><div class="fp"></div><div class="fp"></div>
+            <div class="fence-rail"></div>
+        </div>
+        <!-- Layer 6: Rocks -->
+        <div class="al al-rocks">
+            <div class="rg rg1"><div class="rock rk-a"></div><div class="rock rk-b"></div><div class="rock rk-c"></div></div>
+            <div class="rg rg2"><div class="rock rk-a"></div><div class="rock rk-b"></div></div>
+            <div class="rg rg3"><div class="rock rk-a"></div><div class="rock rk-b"></div></div>
+        </div>
+        <!-- Layer 7: Decorative campfire -->
+        <div class="al al-deco-fire">
+            <div class="campfire cf-deco">
+            <div class="cf-base"></div>
+            <div class="cf-log cf-log-1"></div><div class="cf-log cf-log-2"></div><div class="cf-log cf-log-3"></div>
+            <div class="cf-flame-outer"></div><div class="cf-flame-inner"></div><div class="cf-flame-tip"></div>
+            </div>
+        </div>
+        <!-- Layer 8: Foreground grass fringe -->
+        <div class="al al-grass-fore"></div>
+        <!-- Layer 40: Foreground tree overlays -->
+        <div class="al al-fg-trees">
+            <div class="fg-tree fg-tree-l1"></div>
+            <!--<div class="fg-tree fg-tree-l2"></div>-->
+            <div class="fg-tree fg-tree-r1"></div>
+            <!--<div class="fg-tree fg-tree-r2"></div>-->
+        </div>
+        <!-- Entity pool lives here — z-index 10-30 -->
+        </div>
     </div>
 
     <!-- HUD Top -->
