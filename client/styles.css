@@ -97,6 +97,11 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 .field-mono { font-family: monospace; text-transform: uppercase; letter-spacing: 3px; font-weight: 800; }
 .field-label { display: block; font-weight: 800; font-size: 0.95rem; color: #8B5E3C; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
 
+.room-item { background: rgba(255,255,255,0.6); border: 2px solid #D6BC9A; border-radius: 8px; padding: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; box-shadow: inset 0 2px 4px rgba(255,255,255,0.5), 0 2px 4px rgba(0,0,0,0.05); }
+.room-item:hover { background: #FFFFFF; border-color: #F4852A; transform: scale(1.02); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+.room-item .r-name { font-weight: 800; color: #5C3A21; }
+.room-item .r-count { font-weight: 700; color: #8B5E3C; font-size: 0.9rem; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 10px; }
+
 .btn { font-family: 'Fredoka One', cursive; font-size: 1.15rem; letter-spacing: 0.08em; text-transform: uppercase; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.3); border-radius: 14px; border: none; cursor: pointer; padding: 14px 28px; transition: all 0.15s ease; text-align: center; display: inline-block; position: relative; overflow: hidden; box-shadow: 0 6px 12px rgba(0,0,0,0.2), inset 0 2px 5px rgba(255,255,255,0.3); }
 .btn::after { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); transform: skewX(-20deg); transition: 0.5s; }
 .btn:hover:not(.disabled)::after { left: 150%; }

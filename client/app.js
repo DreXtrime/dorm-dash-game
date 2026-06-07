@@ -141,6 +141,67 @@ class GameApp {
       });
     });
 
+    // Live Public Rooms Logic
+    this.els.btnRefreshRooms = document.getElementById('btn-refresh-rooms');
+    this.els.roomsList = document.getElementById('rooms-list');
+    this.els.liveRoomsContainer = document.getElementById('live-rooms-container');
+    
+    this.fetchLiveRooms = async () => {
+      try {
+        const res = await fetch('/api/rooms');
+        if (!res.ok) return;
+        const rooms = await res.json();
+        
+        this.els.liveRoomsContainer.style.display = 'block';
+        
+        if (rooms.length === 0) {
+          this.els.roomsList.innerHTML = '<div style="text-align: center; color: #888; font-size: 0.9rem; padding: 10px 0;">No active public rooms.</div>';
+          return;
+        }
+
+        this.els.roomsList.innerHTML = '';
+        rooms.forEach(r => {
+          const div = document.createElement('div');
+          div.className = 'room-item';
+          div.innerHTML = `
+            <div>
+              <div class="r-name">${r.hostName}'s Game</div>
+              <div style="font-family: monospace; font-size: 0.8rem; color: #aaa;">Code: ${r.id}</div>
+            </div>
+            <div class="r-count">${r.players}/${r.maxPlayers}</div>
+          `;
+          div.addEventListener('click', () => {
+            this.els.roomInput.value = r.id;
+            this.connectAndJoin('join');
+          });
+          this.els.roomsList.appendChild(div);
+        });
+      } catch (err) {
+        console.error('Failed to fetch rooms', err);
+      }
+    };
+
+    if (this.els.btnRefreshRooms) {
+      this.els.btnRefreshRooms.addEventListener('click', () => {
+        const svg = this.els.btnRefreshRooms.querySelector('svg');
+        if (svg) {
+          svg.style.transition = 'transform 0.5s';
+          svg.style.transform = `rotate(${(this._rot || 0) + 360}deg)`;
+          this._rot = (this._rot || 0) + 360;
+        }
+        this.fetchLiveRooms();
+      });
+    }
+    
+    // Auto fetch initially
+    this.fetchLiveRooms();
+    // Refresh every 5 seconds if on join screen
+    setInterval(() => {
+      if (!this.els.join.classList.contains('hidden')) {
+        this.fetchLiveRooms();
+      }
+    }, 5000);
+
     this.els.btnStartGame.addEventListener('click', () => {
       if (this.state.isHost) this.ws.requestStart();
     });

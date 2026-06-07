@@ -19,8 +19,25 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((req, res) => {
+  if (req.url === '/api/rooms') {
+    const publicRooms = [];
+    for (const [id, room] of rooms.entries()) {
+      if (room.state === 'lobby' && !room.botMode && room.players.size < room.maxPlayers) {
+        // Collect host name
+        const host = Array.from(room.players.values()).find(p => p.id === room.hostId);
+        publicRooms.push({
+          id: id,
+          hostName: host ? host.name : 'Unknown',
+          players: room.players.size,
+          maxPlayers: room.maxPlayers
+        });
+      }
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify(publicRooms));
+  }
+
   let filePath = path.join(CLIENT_DIR, req.url === '/' ? 'index.html' : req.url.split('?')[0]);
-  
   if (!path.extname(filePath)) {
     filePath = path.join(CLIENT_DIR, 'index.html');
   }
