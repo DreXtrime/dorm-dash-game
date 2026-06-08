@@ -28,14 +28,20 @@ Play here: https://dorm-dash-game.onrender.com
 
 ### Joining the Game
 1. **Name & Avatar:** On the main join screen, enter your player name and select a colored camper (Green, Red, Blue, or Yellow).
-2. **Room Code:** Enter a 4-letter Room Code (e.g., `ABCD`) to join an existing lobby or create a new one.
+2. **Singleplayer:** You can also hit the singleplayer button to start a match against ai.
+3. **Room Code:** Enter a 4-letter Room Code (e.g., `ABCD`) to join an existing lobby or create a new one.
 
 ![Join Screen](./docs/images/join_screen.png)
 
-### The Lobby
+### Multipalyer Lobby
 - Once in the lobby, you'll see a preview of the arena and all the connected players.
 - You can copy the room link and share it with your friends to invite them.
 - If you are the Host (the first person to create the room), you can start the game once everyone is ready!
+### Singleplayer Lobby
+- Here you can choose the amount of ai
+- Specify how difficult each bot is
+- Give each bot a name
+- Choose a skill multiplier for each bot (refer to the [How the AI / Bot System Works](#how-the-ai--bot-system-works) section to more info)
 
 ### In-Game Mechanics
 - **Movement:** Use the `W, A, S, D` keys, the `Arrow Keys`, or the on-screen mobile D-Pad to move your camper around the dirt compound.
@@ -51,6 +57,7 @@ Play here: https://dorm-dash-game.onrender.com
 ### End of Game
 - When the timer expires, the screen shifts to the final scoreboard, crowning the winner!
 - Players who click **Play Again** will enter a waiting state. If the Host clicks **Play Again**, everyone who chose to wait will be seamlessly dropped back into the Lobby for another round!
+- If it was a bot match **Play Again** will take you to a new singleplayer lobby
 
 ![End Screen](./docs/images/end_screen.png)
 
