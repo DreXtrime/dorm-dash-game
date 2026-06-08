@@ -572,12 +572,24 @@ class GameApp {
         this.els.winnerName.textContent = 'Game Over';
         const finalSb = document.getElementById('end-scoreboard');
         if (finalSb) finalSb.innerHTML = '';
-        Object.entries(data.scores).forEach(([id, score]) => {
+        // Sort scores descending
+        const sortedScores = Object.entries(data.scores).sort((a,b) => b[1] - a[1]);
+        sortedScores.forEach(([id, score], index) => {
           const p = this.state.players.find(pl => pl.id === id);
           if (p && finalSb) {
             const row = document.createElement('div');
-            row.className = 'final-row';
-            row.innerHTML = `<span>${p.name}</span><span>${score}</span>`;
+            row.className = `final-row ${index === 0 ? 'winner' : ''}`;
+            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+            row.innerHTML = `
+              <div class="fr-left">
+                <span class="fr-rank">${medal}</span>
+                <div class="fr-dot" style="background-color: ${this.playerColors[p.color]||'#fff'}"></div>
+                <span class="fr-name">${p.name}</span>
+              </div>
+              <span class="fr-score">${score}</span>
+            `;
+            // Add staggered animation delay
+            row.style.animationDelay = `${index * 0.15 + 0.3}s`;
             finalSb.appendChild(row);
             if (id === data.winnerId) this.els.winnerName.textContent = `${p.name} Wins!`;
           }
