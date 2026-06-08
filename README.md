@@ -1,6 +1,6 @@
 # Dorm Dash - Multiplayer Game
 
-![Reference Mockups](./docs/images/reference_mockups.png)
+![Reference Mockups](./docs/images/overview.png)
 
 ## Overview
 **Dorm Dash** is a real-time multiplayer browser game built for high performance and engaging gameplay. The project relies on a strictly DOM+CSS based rendering engine (no `<canvas>`) to deliver a fully responsive 60+ FPS experience, seamlessly connected to a real-time WebSocket backend. 
