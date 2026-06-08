@@ -438,3 +438,76 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 /* Live Rooms Indicator */
 .live-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #4CAF50; box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.6); animation: live-pulse 1.5s ease-in-out infinite; flex-shrink: 0; }
 @keyframes live-pulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(76,175,80,0.6); } 70% { transform: scale(1.1); box-shadow: 0 0 0 7px rgba(76,175,80,0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(76,175,80,0); } }
+
+
+.bot-config-card {
+  background: rgba(255,255,255,0.6);
+  border: 2px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.bot-card-header {
+  background: rgba(0,0,0,0.06);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.bot-card-title {
+  font-family: 'Fredoka One', cursive;
+  font-size: 1rem;
+  color: #5D2E0C;
+}
+.bot-card-body {
+  padding: 12px 14px;
+}
+.bot-difficulty-btns {
+  display: flex;
+  gap: 6px;
+}
+.diff-btn {
+  padding: 4px 10px;
+  border: 2px solid rgba(0,0,0,0.15);
+  border-radius: 20px;
+  background: white;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  color: #555;
+  transition: all 0.15s;
+}
+.diff-btn.active[data-diff="easy"]   { background: #4CAF50; color: white; border-color: #4CAF50; }
+.diff-btn.active[data-diff="medium"] { background: #FF9800; color: white; border-color: #FF9800; }
+.diff-btn.active[data-diff="hard"]   { background: #F44336; color: white; border-color: #F44336; }
+.bot-count-btn {
+  flex: 1;
+  background: white;
+  border: 2px solid rgba(0,0,0,0.15);
+  color: #555;
+  font-weight: 700;
+}
+.bot-count-btn.active {
+  background: #FF9800;
+  border-color: #FF9800;
+  color: white;
+}
+.skill-stars {
+  display: flex;
+  gap: 3px;
+  margin-top: 4px;
+}
+.star {
+  font-size: 1.3rem;
+  color: #ccc;
+  cursor: pointer;
+  transition: color 0.1s;
+  line-height: 1;
+}
+.star.active { color: #FFD700; }
+.bot-effectiveness {
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+  margin-top: 4px;
+  color: #FF9800;
+}

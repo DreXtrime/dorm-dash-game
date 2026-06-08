@@ -5,7 +5,8 @@ class GameApp {
       join: document.getElementById('screen-join'),
       lobby: document.getElementById('screen-lobby'),
       game: document.getElementById('screen-game'),
-      end: document.getElementById('screen-end')
+      end: document.getElementById('screen-end'),
+      singleplayer: document.getElementById('screen-singleplayer')
     };
     this.sound = new SoundEngine();
     this.soundEnabled = localStorage.getItem('dorm-dash-volume') !== '0';
@@ -144,19 +145,85 @@ class GameApp {
     updateActionBtns();
 
     // VS BOT — auto-creates a private room and starts immediately (bypasses lobby)
+    // Single player button — go to setup screen instead of straight into game
     document.getElementById('btn-vs-bot').addEventListener('click', () => {
       const hasName = this.els.nameInput.value.trim().length > 0;
       if (!hasName) { this.showBanner('Enter your name first!'); return; }
-      const name = this.els.nameInput.value.trim();
+      this.showScreen('singleplayer');
+    });
+    
+    // Back button on single player setup screen
+    document.getElementById('btn-back-to-join').addEventListener('click', () => {
+      this.showScreen('join');
+    });
+    
+    // Bot count selector
+    document.querySelectorAll('.bot-count-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.bot-count-btn').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        const count = parseInt(e.currentTarget.dataset.count);
+        // Show/hide bot config cards based on count
+        for (let i = 0; i < 3; i++) {
+          const card = document.getElementById(`bot-card-${i}`);
+          if (card) card.classList.toggle('hidden', i >= count);
+        }
+      });
+    });
+    
+    // Difficulty buttons — one active per bot card
+    document.querySelectorAll('.bot-config-card').forEach(card => {
+      card.querySelectorAll('.diff-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          card.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+          e.currentTarget.classList.add('active');
+          this._updateBotEffectiveness(card);
+        });
+      });
+    });
+    
+    // Star skill rating
+    document.querySelectorAll('.skill-stars').forEach(starsEl => {
+      starsEl.querySelectorAll('.star').forEach(star => {
+        star.addEventListener('click', (e) => {
+          const val = parseInt(e.currentTarget.dataset.val);
+          starsEl.querySelectorAll('.star').forEach(s => {
+            s.classList.toggle('active', parseInt(s.dataset.val) <= val);
+          });
+          const botIndex = parseInt(starsEl.dataset.bot);
+          const card = document.getElementById(`bot-card-${botIndex}`);
+          this._updateBotEffectiveness(card);
+        });
+      });
+    });
+    
+    // Start single player game
+    document.getElementById('btn-start-singleplayer').addEventListener('click', () => {
+      const name = this.els.nameInput.value.trim() || 'Camper';
       const room = 'BOT' + Math.random().toString(36).substring(2, 5).toUpperCase();
       this.state.roomId = room;
+    
+      // Read round timer
+      const timerVal = parseInt(document.getElementById('sp-setting-timer').value);
+    
+      // Build bot configs from the UI
+      const botCount = parseInt(document.querySelector('.bot-count-btn.active').dataset.count);
+      const bots = [];
+      for (let i = 0; i < botCount; i++) {
+        const card = document.getElementById(`bot-card-${i}`);
+        const difficulty = card.querySelector('.diff-btn.active').dataset.diff;
+        const skillStars = card.querySelectorAll('.star.active').length;
+        const botName = card.querySelector('.bot-name-input').value.trim() || `Bot ${i + 1}`;
+        bots.push({ difficulty, skill: skillStars, name: botName });
+      }
+    
       this.stopWatcher();
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}`;
       this.ws = new WsClient(wsUrl, this.onMessage.bind(this));
       this.ws.connect().then(() => {
         this.ws.joinRoom(room, name, this.state.localColor, 'create');
-        this._pendingBotMode = true;
+        this._pendingBotConfig = { bots, roundTime: timerVal };
       }).catch(() => {
         this.showBanner('Failed to connect to the server.');
         this.connectWatcher();
@@ -485,13 +552,17 @@ class GameApp {
 
       case 'joined_room':
         this.state.localPlayerId = data.id;
-        if (this._pendingBotMode) {
-          this._pendingBotMode = false;
-          // Skip lobby — immediately request a bot game
-          this.ws.send({ type: 'request_start', botMode: true });
-          // Don't show lobby screen; game_start will transition us
+        if (this._pendingBotConfig) {
+        const cfg = this._pendingBotConfig;
+        this._pendingBotConfig = null;
+        this.ws.send({
+            type: 'request_start',
+            botMode: true,
+            bots: cfg.bots,
+            roundTime: cfg.roundTime
+        });
         } else {
-          this.showScreen('lobby');
+        this.showScreen('lobby');
         }
         break;
 
@@ -874,6 +945,24 @@ class GameApp {
     });
 
     this.rafId = requestAnimationFrame((t) => this.gameLoop(t));
+  }
+  _updateBotEffectiveness(card) {
+    const diff = card.querySelector('.diff-btn.active')?.dataset.diff || 'medium';
+    const skill = card.querySelectorAll('.star.active').length;
+    const botIndex = card.id.replace('bot-card-', '');
+  
+    // Score out of 10: difficulty contributes 5, skill contributes 5
+    const diffScore = { easy: 1, medium: 3, hard: 5 }[diff] || 3;
+    const skillScore = skill; // 1-5
+    const total = diffScore + skillScore; // 2-10
+  
+    // Display as filled/empty dots out of 5 (scaled from 10)
+    const dots = Math.round(total / 2);
+    const filled = '●'.repeat(dots);
+    const empty = '○'.repeat(5 - dots);
+  
+    const effEl = document.getElementById(`bot-eff-${botIndex}`);
+    if (effEl) effEl.textContent = filled + empty;
   }
 }
 
