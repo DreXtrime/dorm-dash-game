@@ -2,6 +2,17 @@
 
 ![Reference Mockups](./docs/images/overview.png)
 
+## Table of Contents
+* [Overview](#overview)
+* [🌐 Play Now](#-play-now)
+* [🎮 How to Play](#-how-to-play)
+* [Architecture & Technology Stack](#architecture--technology-stack)
+* [Local Development Setup](#local-development-setup)
+* [Backend Implementation Guide](#backend-implementation-guide)
+* [Performance Constraints](#performance-constraints)
+* [How the AI / Bot System Works](#how-the-ai--bot-system-works)
+* [Credits](#credits)
+
 ## Overview
 **Dorm Dash** is a real-time multiplayer browser game built for high performance and engaging gameplay. The project relies on a strictly DOM+CSS based rendering engine (no `<canvas>`) to deliver a fully responsive 60+ FPS experience, seamlessly connected to a real-time WebSocket backend. 
 
@@ -11,7 +22,7 @@ Players join a room, select a colored avatar, and enter a forest camp compound w
 
 ## 🌐 Play Now  
 For your convenience you can access a online ready to play version of the game!  
-Play here: https://web-hosting-multiplayer.onrender.com/
+Play here: https://dorm-dash-game.onrender.com
 
 ## 🎮 How to Play
 
@@ -83,3 +94,39 @@ The backend is strictly responsible for:
 ## Performance Constraints
 - **Zero Canvas**: The entire game is rendered using DOM elements and hardware-accelerated CSS transforms (`translate3d`). No `<canvas>` elements are permitted.
 - **Object Pooling**: DOM nodes are pre-allocated at startup. To maintain 60 FPS, no elements should be created or destroyed inside the `requestAnimationFrame` loop.
+
+## How the AI / Bot System Works
+
+For the single-player mode there is bot system that runs directly on the server loop. It uses a simple state machine that decides what to do based on what is closest to it at any given moment.
+
+### Core Logic and Priorities
+
+Every few frames, the bot checks its surroundings and runs through a checklist of priorities to decide its next move:
+
+- Avoid Danger: First, it checks if a cloud is nearby. If a cloud gets too close (and the bot doesn't have a shield), it instantly switches to an evade_cloud state and moves in the exact opposite direction.
+
+- Grab Powerups: If it's safe, the bot scans for any powerups in range. If it finds a speed bolt, shield, or magnet, it goes straight for it.
+
+- Collect Embers: If there are no threats or powerups around, it locks onto the nearest ember to score points.
+
+- Wander: If the board is completely empty, it just picks a random spot on the screen and walks toward it.
+
+### Difficulty Modes
+
+To make the ai more varied, there are three difficulty presets (Easy, Medium, and Hard). They change how the bot performs by tweaking a few configuration values:
+
+- Reaction Ticks: The bot doesn't "think" every single frame. Easy bots only re-evaluate their targets every 35 ticks, while Hard bots react almost instantly.
+
+- Jitter (Accuracy): Easy bots are clumsy. When they target an ember, a random offset is added to their destination so they don't move perfectly. Hard bots have almost none of that, making them very precise.
+
+- Movement Speed: The base speed of the bot is scaled down for Easy (0.65x) and boosted for Hard (1.05x).
+
+- Fail Chance: To simulate human mistakes, there is a random trigger. On Easy, there is a 35% chance the bot will randomly ignore everything and just wander off for a moment. On Hard, this only happens 3% of the time.
+
+There is also skill multiplier that fine-tunes these stats even further, adjusting response times, speed, and accuracy together.
+
+## Credits
+
+Imran Shiundu - dorm-dash game  
+Andrei-Ionut Mihaila - dorm-dash game  
+Tanel Erik Neitov - dorm-dash game + npc ai
