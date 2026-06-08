@@ -42,6 +42,7 @@ Play here: https://dorm-dash-game.onrender.com
 - Specify how difficult each bot is
 - Give each bot a name
 - Choose a skill multiplier for each bot (refer to the [How the AI / Bot System Works](#how-the-ai--bot-system-works) section for more info)
+![Singleplayer Screen](./docs/images/singleplayer_screen.png)
 
 ### In-Game Mechanics
 - **Movement:** Use the `W, A, S, D` keys, the `Arrow Keys`, or the on-screen mobile D-Pad to move your camper around the dirt compound.
