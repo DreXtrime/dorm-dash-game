@@ -496,6 +496,9 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
   display: flex;
   gap: 3px;
   margin-top: 4px;
+  background: #ededeb;
+  border-radius: 5px;
+  
 }
 .star {
   font-size: 1.3rem;
