@@ -179,6 +179,11 @@ wss.on('connection', (ws) => {
       
       ws.roomId = roomId;
 
+      if (r.botMode) {
+        ws.send(JSON.stringify({ type: 'join_error', message: 'This is a private single-player game.' }));
+        return;
+      }
+      
       if (r.state !== 'lobby') {
         ws.send(JSON.stringify({ type: 'error', message: 'Game already in progress' }));
         return;
@@ -218,6 +223,7 @@ wss.on('connection', (ws) => {
         room.state = 'playing';
         room.timer = room.roundTime;
         room.botMode = !!data.botMode; // track if this is a solo-vs-bot game
+        if (data.roundTime) { room.roundTime = data.roundTime; room.timer = data.roundTime; }
 
         const activePlayers = Array.from(room.players.values()).filter(p => p.inLobby !== false);
 
@@ -236,27 +242,56 @@ wss.on('connection', (ws) => {
           p.isMoving = false;
         });
 
-        // Only add a bot when botMode is explicitly requested
-        if (room.botMode) {
-          const botId = 'bot_' + generateId();
-          room.players.set(botId, {
-            id: botId,
-            ws: null,
-            name: 'Bot',
-            color: 'red',
-            score: 0,
-            x: 700,
-            y: 350,
-            dx: 0,
-            dy: 0,
-            isMoving: false,
-            powerups: {},
-            targetX: 700,
-            targetY: 350,
-            // Bot AI state
-            botState: 'wander',       // wander | chase_ember | chase_powerup | evade_cloud
-            botStateTimer: 0,
-            botReactionDelay: 0,      // ticks before bot "notices" a new target
+        if (room.botMode && data.bots && data.bots.length > 0) {
+          const BOT_COLORS = ['red', 'blue', 'yellow'];
+          const DIFFICULTY_CONFIGS = {
+            easy:   { reactionTicks: 35, jitter: 60, speedMult: 0.65, evadeRadius: 60,  powerupRange: 100, failChance: 0.35 },
+            medium: { reactionTicks: 20, jitter: 25, speedMult: 0.85, evadeRadius: 100, powerupRange: 200, failChance: 0.15 },
+            hard:   { reactionTicks: 8,  jitter: 5,  speedMult: 1.05, evadeRadius: 130, powerupRange: 350, failChance: 0.03 }
+          };
+        
+          const SKILL_MULTIPLIER = (skill) => ({
+            reactionMult: 1 - (skill - 1) * 0.08,   // faster reactions
+            jitterMult:   1 - (skill - 1) * 0.15,   // more accurate
+            speedMult:    1 + (skill - 1) * 0.05,   // slightly faster
+            failMult:     1 - (skill - 1) * 0.18    // fails less
+          });
+        
+          const spawnPoints = [
+            { x: 700, y: 250 }, { x: 900, y: 450 }, { x: 500, y: 500 }
+          ];
+        
+          data.bots.forEach((botConfig, i) => {
+            const botId = 'bot_' + generateId();
+            const base = DIFFICULTY_CONFIGS[botConfig.difficulty] || DIFFICULTY_CONFIGS.medium;
+            const sm = SKILL_MULTIPLIER(botConfig.skill || 3);
+        
+            const cfg = {
+              reactionTicks: Math.round(base.reactionTicks * sm.reactionMult),
+              jitter:        Math.round(base.jitter        * sm.jitterMult),
+              speedMult:     base.speedMult * sm.speedMult,
+              evadeRadius:   base.evadeRadius,
+              powerupRange:  base.powerupRange,
+              failChance:    Math.max(0, base.failChance * sm.failMult)
+            };
+        
+            room.players.set(botId, {
+              id: botId,
+              ws: null,
+              name: botConfig.name || `Bot ${i + 1}`,
+              color: BOT_COLORS[i],
+              score: 0,
+              x: spawnPoints[i].x,
+              y: spawnPoints[i].y,
+              dx: 0, dy: 0,
+              isMoving: false,
+              powerups: {},
+              targetX: spawnPoints[i].x,
+              targetY: spawnPoints[i].y,
+              botState: 'wander',
+              botStateTimer: 0,
+              difficultyConfig: cfg
+            });
           });
         }
 
@@ -518,79 +553,77 @@ function gameTick(room) {
   if (cloudCount < playerCount + 1) spawnCloud(room);
 
   for (const p of room.players.values()) {
-    if (!p.ws) {
-      // ── SMART BOT AI ──────────────────────────────────────
-      // Difficulty: bot gets faster reactions as game progresses
-      const gameProgress = 1 - (room.timer / room.roundTime); // 0→1
-      const reactionInterval = Math.max(8, 30 - Math.floor(gameProgress * 22)); // ticks
-      p.botStateTimer = (p.botStateTimer || 0) + 1;
-
-      if (p.botStateTimer >= reactionInterval) {
-        p.botStateTimer = 0;
-
-        const entities = Array.from(room.entities.values());
-
-        // 1. Check for nearby threatening clouds first (evade)
-        let nearestCloud = null, nearestCloudDist = 110;
-        for (const e of entities) {
-          if (e.type !== 'cloud') continue;
-          const d = Math.hypot(p.x - e.x, p.y - e.y);
-          if (d < nearestCloudDist) { nearestCloud = e; nearestCloudDist = d; }
-        }
-
-        if (nearestCloud && !p.powerups.shield) {
-          // Evade: run directly away from cloud
-          const awayX = p.x + (p.x - nearestCloud.x);
-          const awayY = p.y + (p.y - nearestCloud.y);
-          p.targetX = Math.max(80, Math.min(ARENA_WIDTH - 80, awayX));
-          p.targetY = Math.max(230, Math.min(ARENA_HEIGHT - 80, awayY));
-          p.botState = 'evade_cloud';
-        } else {
-          // 2. Look for powerups (high priority)
-          let nearestPU = null, nearestPUDist = Infinity;
-          for (const e of entities) {
-            if (!e.type.startsWith('powerup-')) continue;
-            const d = Math.hypot(p.x - e.x, p.y - e.y);
-            if (d < nearestPUDist) { nearestPU = e; nearestPUDist = d; }
-          }
-
-          // 3. Look for nearest ember
-          let nearestEmber = null, nearestEmberDist = Infinity;
-          for (const e of entities) {
-            if (e.type !== 'ember') continue;
-            const d = Math.hypot(p.x - e.x, p.y - e.y);
-            if (d < nearestEmberDist) { nearestEmber = e; nearestEmberDist = d; }
-          }
-
-          // Decide target: powerup < 250px wins over ember, else go for ember
-          if (nearestPU && nearestPUDist < 250) {
-            p.targetX = nearestPU.x;
-            p.targetY = nearestPU.y;
-            p.botState = 'chase_powerup';
-          } else if (nearestEmber) {
-            // Add small imperfection — bot misses slightly (harder at end of game)
-            const jitter = Math.max(0, 30 - Math.floor(gameProgress * 28));
-            p.targetX = nearestEmber.x + (Math.random() - 0.5) * jitter;
-            p.targetY = nearestEmber.y + (Math.random() - 0.5) * jitter;
-            p.botState = 'chase_ember';
-          } else {
-            // Wander to a random arena point
+      if (!p.ws) {
+        const cfg = p.difficultyConfig || { reactionTicks: 20, jitter: 25, speedMult: 0.85, evadeRadius: 100, powerupRange: 200, failChance: 0.15 };
+        p.botStateTimer = (p.botStateTimer || 0) + 1;
+      
+        if (p.botStateTimer >= cfg.reactionTicks) {
+          p.botStateTimer = 0;
+          const entities = Array.from(room.entities.values());
+      
+          // Random failure -- bot picks a random wander point instead of doing anything smart
+          if (Math.random() < cfg.failChance) {
             p.targetX = 150 + Math.random() * (ARENA_WIDTH - 300);
             p.targetY = 250 + Math.random() * (ARENA_HEIGHT - 350);
             p.botState = 'wander';
+          } else {
+            // 1. Evade nearby clouds
+            let nearestCloud = null, nearestCloudDist = cfg.evadeRadius;
+            for (const e of entities) {
+              if (e.type !== 'cloud') continue;
+              const d = Math.hypot(p.x - e.x, p.y - e.y);
+              if (d < nearestCloudDist) { nearestCloud = e; nearestCloudDist = d; }
+            }
+      
+            if (nearestCloud && !p.powerups.shield) {
+              const awayX = p.x + (p.x - nearestCloud.x);
+              const awayY = p.y + (p.y - nearestCloud.y);
+              p.targetX = Math.max(80, Math.min(ARENA_WIDTH - 80, awayX));
+              p.targetY = Math.max(230, Math.min(ARENA_HEIGHT - 80, awayY));
+              p.botState = 'evade_cloud';
+            } else {
+              // 2. Chase nearby powerups
+              let nearestPU = null, nearestPUDist = cfg.powerupRange;
+              for (const e of entities) {
+                if (!e.type.startsWith('powerup-')) continue;
+                const d = Math.hypot(p.x - e.x, p.y - e.y);
+                if (d < nearestPUDist) { nearestPU = e; nearestPUDist = d; }
+              }
+      
+              // 3. Chase nearest ember
+              let nearestEmber = null, nearestEmberDist = Infinity;
+              for (const e of entities) {
+                if (e.type !== 'ember') continue;
+                const d = Math.hypot(p.x - e.x, p.y - e.y);
+                if (d < nearestEmberDist) { nearestEmber = e; nearestEmberDist = d; }
+              }
+      
+              if (nearestPU) {
+                p.targetX = nearestPU.x;
+                p.targetY = nearestPU.y;
+                p.botState = 'chase_powerup';
+              } else if (nearestEmber) {
+                p.targetX = nearestEmber.x + (Math.random() - 0.5) * cfg.jitter;
+                p.targetY = nearestEmber.y + (Math.random() - 0.5) * cfg.jitter;
+                p.botState = 'chase_ember';
+              } else {
+                p.targetX = 150 + Math.random() * (ARENA_WIDTH - 300);
+                p.targetY = 250 + Math.random() * (ARENA_HEIGHT - 350);
+                p.botState = 'wander';
+              }
+            }
           }
         }
+      
+        // Move toward target, applying speed multiplier from difficulty config
+        const dist = Math.hypot(p.targetX - p.x, p.targetY - p.y);
+        if (dist > 8) {
+          p.dx = (p.targetX - p.x) / dist;
+          p.dy = (p.targetY - p.y) / dist;
+        } else {
+          p.dx = 0; p.dy = 0;
+        }
       }
-
-      // Move towards target
-      const dist = Math.hypot(p.targetX - p.x, p.targetY - p.y);
-      if (dist > 8) {
-        p.dx = (p.targetX - p.x) / dist;
-        p.dy = (p.targetY - p.y) / dist;
-      } else {
-        p.dx = 0; p.dy = 0;
-      }
-    }
 
     let cloudSlow = false;
     const hasShield = p.powerups.shield && p.powerups.shield > now;
@@ -614,6 +647,10 @@ function gameTick(room) {
       baseSpeed = 350;
     } else if (p.powerups.bolt) {
       delete p.powerups.bolt;
+    }
+    // bot difficulty speed multiplier
+    if (!p.ws && p.difficultyConfig) {
+      baseSpeed *= p.difficultyConfig.speedMult;
     }
     
     if (p.powerups.shield && p.powerups.shield <= now) delete p.powerups.shield;
