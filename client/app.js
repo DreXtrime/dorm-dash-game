@@ -96,20 +96,24 @@ class GameApp {
       });
     });
 
-    this.connectAndJoin = (intent) => {
+    this.connectAndJoin = (intent, roomCodeOverride) => {
       const name = this.els.nameInput.value.trim() || 'Camper';
-      let room = this.els.roomInput.value.trim().toUpperCase();
+      let room = roomCodeOverride || this.els.roomInput.value.trim().toUpperCase();
 
       if (intent === 'join' && !room) {
         this.showBanner('Please enter a room code to join.');
         return;
       }
       if (intent === 'create') {
+        // Always generate a fresh code so we never accidentally collide
         room = Math.random().toString(36).substring(2, 6).toUpperCase();
-        this.els.roomInput.value = room;
+        this.els.roomInput.value = '';
       }
 
       this.state.roomId = room;
+
+      // Stop the watcher connection before opening the game connection
+      this.stopWatcher();
       
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}`;
@@ -118,26 +122,42 @@ class GameApp {
         this.ws.joinRoom(room, name, this.state.localColor, intent);
       }).catch(() => {
         this.showBanner('Failed to connect to the server.');
+        // Restart watcher since we failed to connect
+        this.connectWatcher();
       });
     };
 
     this.els.btnCreate.addEventListener('click', () => this.connectAndJoin('create'));
     this.els.btnJoin.addEventListener('click', () => this.connectAndJoin('join'));
 
-    // VS BOT — auto-creates a private room and starts immediately
+    // Name validation: disable action buttons until name is entered
+    const updateActionBtns = () => {
+      const hasName = this.els.nameInput.value.trim().length > 0;
+      ['btn-create-room', 'btn-join-room', 'btn-vs-bot'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('disabled', !hasName);
+      });
+    };
+    this.els.nameInput.addEventListener('input', updateActionBtns);
+    updateActionBtns();
+
+    // VS BOT — auto-creates a private room and starts immediately (bypasses lobby)
     document.getElementById('btn-vs-bot').addEventListener('click', () => {
-      const name = this.els.nameInput.value.trim() || 'Camper';
+      const hasName = this.els.nameInput.value.trim().length > 0;
+      if (!hasName) { this.showBanner('Enter your name first!'); return; }
+      const name = this.els.nameInput.value.trim();
       const room = 'BOT' + Math.random().toString(36).substring(2, 5).toUpperCase();
       this.state.roomId = room;
+      this.stopWatcher();
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}`;
       this.ws = new WsClient(wsUrl, this.onMessage.bind(this));
       this.ws.connect().then(() => {
         this.ws.joinRoom(room, name, this.state.localColor, 'create');
-        // After joined_room fires, auto-request start with bot flag
         this._pendingBotMode = true;
       }).catch(() => {
         this.showBanner('Failed to connect to the server.');
+        this.connectWatcher();
       });
     });
 
@@ -146,38 +166,65 @@ class GameApp {
     this.els.roomsList = document.getElementById('rooms-list');
     this.els.liveRoomsContainer = document.getElementById('live-rooms-container');
     
-    this.fetchLiveRooms = async () => {
-      try {
-        const res = await fetch('/api/rooms');
-        if (!res.ok) return;
-        const rooms = await res.json();
-        
-        this.els.liveRoomsContainer.style.display = 'block';
-        
-        if (rooms.length === 0) {
-          this.els.roomsList.innerHTML = '<div style="text-align: center; color: #888; font-size: 0.9rem; padding: 10px 0;">No active public rooms.</div>';
-          return;
-        }
+    this.renderLiveRooms = (rooms) => {
+      this.els.liveRoomsContainer.style.display = 'block';
+      if (rooms.length === 0) {
+        this.els.roomsList.innerHTML = '<div style="text-align: center; color: #888; font-size: 0.9rem; padding: 10px 0;">No active public rooms.</div>';
+        return;
+      }
 
-        this.els.roomsList.innerHTML = '';
-        rooms.forEach(r => {
-          const div = document.createElement('div');
-          div.className = 'room-item';
-          div.innerHTML = `
-            <div>
-              <div class="r-name">${r.hostName}'s Game</div>
-              <div style="font-family: monospace; font-size: 0.8rem; color: #aaa;">Code: ${r.id}</div>
-            </div>
-            <div class="r-count">${r.players}/${r.maxPlayers}</div>
-          `;
-          div.addEventListener('click', () => {
-            this.els.roomInput.value = r.id;
-            this.connectAndJoin('join');
-          });
-          this.els.roomsList.appendChild(div);
+      this.els.roomsList.innerHTML = '';
+      rooms.forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'room-item';
+        div.innerHTML = `
+          <div>
+            <div class="r-name">${r.hostName}'s Game</div>
+            <div style="font-family: monospace; font-size: 0.8rem; color: #aaa;">Code: ${r.id}</div>
+          </div>
+          <div class="r-count">${r.players}/${r.maxPlayers}</div>
+        `;
+        div.addEventListener('click', () => {
+          if (!this.els.nameInput.value.trim()) {
+            this.showBanner('Enter your name first!');
+            this.els.nameInput.focus();
+            return;
+          }
+          this.connectAndJoin('join', r.id);
         });
-      } catch (err) {
-        console.error('Failed to fetch rooms', err);
+        this.els.roomsList.appendChild(div);
+      });
+    };
+
+    this.connectWatcher = () => {
+      // Fresh connection — do NOT close here (stopWatcher handles that)
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}`;
+      this.watchWs = new WebSocket(wsUrl);
+      this.watchWs.onopen = () => {
+        this.watchWs.send(JSON.stringify({ type: 'watch_rooms' }));
+      };
+      this.watchWs.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === 'public_rooms_update') {
+            this.renderLiveRooms(data.rooms);
+          }
+        } catch (err) {}
+      };
+      this.watchWs.onclose = () => {
+        // Reconnect silently if we are still on the join screen
+        if (!this.els.join.classList.contains('hidden')) {
+          setTimeout(this.connectWatcher, 2000);
+        }
+      };
+    };
+
+    this.stopWatcher = () => {
+      if (this.watchWs) {
+        this.watchWs.onclose = null; // Prevent auto-reconnect
+        this.watchWs.close();
+        this.watchWs = null;
       }
     };
 
@@ -189,18 +236,13 @@ class GameApp {
           svg.style.transform = `rotate(${(this._rot || 0) + 360}deg)`;
           this._rot = (this._rot || 0) + 360;
         }
-        this.fetchLiveRooms();
+        this.stopWatcher();
+        this.connectWatcher();
       });
     }
-    
-    // Auto fetch initially
-    this.fetchLiveRooms();
-    // Refresh every 5 seconds if on join screen
-    setInterval(() => {
-      if (!this.els.join.classList.contains('hidden')) {
-        this.fetchLiveRooms();
-      }
-    }, 5000);
+
+    // Connect initially
+    this.connectWatcher();
 
     this.els.btnStartGame.addEventListener('click', () => {
       if (this.state.isHost) this.ws.requestStart();
@@ -330,6 +372,15 @@ class GameApp {
     Object.values(this.screens).forEach(s => s.classList.add('hidden'));
     this.screens[name].classList.remove('hidden');
     if (name !== 'end') this.els.confettiContainer.innerHTML = '';
+    if (name === 'join') {
+      // Return to join screen: restart the live room watcher
+      if (typeof this.connectWatcher === 'function') {
+        this.stopWatcher && this.stopWatcher();
+        this.connectWatcher();
+      }
+      // Clear any stale room code from the input
+      if (this.els.roomInput) this.els.roomInput.value = '';
+    }
   }
 
   showBanner(text, type='error') {
@@ -371,12 +422,8 @@ class GameApp {
       case 'error':
       case 'join_error':
         this.showBanner(data.message, 'error');
-        if (this.ws) this.ws.disconnect();
+        if (this.ws) { this.ws.disconnect(); this.ws = null; }
         this.showScreen('join');
-        break;
-
-      case 'error':
-        this.showBanner(data.message, 'error');
         break;
 
       case 'room_recreated':

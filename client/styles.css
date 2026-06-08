@@ -114,7 +114,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 .btn:hover:not(.disabled)::after { left: 150%; }
 .btn:hover:not(.disabled) { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,0,0,0.25), inset 0 2px 5px rgba(255,255,255,0.4); filter: brightness(1.05); }
 .btn:active:not(.disabled) { transform: translateY(4px); border-bottom-width: 0 !important; margin-top: 4px; padding-bottom: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 2px 5px rgba(0,0,0,0.1); }
-.btn.disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(0.8); box-shadow: none; transform: translateY(4px); border-bottom-width: 0 !important; margin-top: 4px; padding-bottom: 14px; }
+.btn.disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; filter: grayscale(1); box-shadow: none; transform: translateY(0); border-bottom-width: 2px !important; }
 .btn-block { display: block; width: 100%; margin-top: 16px; }
 .btn-lg { padding: 18px 28px; font-size: 1.4rem; }
 .btn-sm { padding: 10px 18px; font-size: 0.95rem; border-radius: 10px; }
@@ -394,3 +394,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 .trophy-bounce { animation: trophyBounce 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); }
 @keyframes trophyBounce { 0% { transform: scale(0) rotate(-20deg); opacity: 0; } 70% { transform: scale(1.2) rotate(5deg); } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
 .end-card { max-width: 440px; width: 90vw; text-align: center; display: flex; flex-direction: column; align-items: center; padding: 28px 28px 20px; }
+
+/* Live Rooms Indicator */
+.live-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #4CAF50; box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.6); animation: live-pulse 1.5s ease-in-out infinite; flex-shrink: 0; }
+@keyframes live-pulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(76,175,80,0.6); } 70% { transform: scale(1.1); box-shadow: 0 0 0 7px rgba(76,175,80,0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(76,175,80,0); } }

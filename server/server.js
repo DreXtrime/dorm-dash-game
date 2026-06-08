@@ -76,6 +76,30 @@ const TICK_RATE = 20;
 const TICK_MS = 1000 / TICK_RATE;
 
 const rooms = new Map();
+const watchers = new Set(); // Clients watching for public room updates
+
+function getPublicRooms() {
+  const publicRooms = [];
+  for (const [id, room] of rooms.entries()) {
+    if (room.state === 'lobby' && !room.botMode && room.players.size < room.maxPlayers) {
+      const host = Array.from(room.players.values()).find(p => p.id === room.hostId);
+      publicRooms.push({
+        id: id,
+        hostName: host ? host.name : 'Unknown',
+        players: room.players.size,
+        maxPlayers: room.maxPlayers
+      });
+    }
+  }
+  return publicRooms;
+}
+
+function broadcastPublicRooms() {
+  const data = JSON.stringify({ type: 'public_rooms_update', rooms: getPublicRooms() });
+  for (const ws of watchers) {
+    if (ws.readyState === 1) ws.send(data);
+  }
+}
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
@@ -101,6 +125,7 @@ function broadcastRoomUpdate(room) {
       p.ws.send(payload);
     }
   }
+  broadcastPublicRooms();
 }
 
 wss.on('connection', (ws) => {
@@ -110,6 +135,12 @@ wss.on('connection', (ws) => {
   ws.on('message', (message) => {
     let data;
     try { data = JSON.parse(message); } catch (e) { return; }
+
+    if (data.type === 'watch_rooms') {
+      watchers.add(ws);
+      ws.send(JSON.stringify({ type: 'public_rooms_update', rooms: getPublicRooms() }));
+      return;
+    }
 
     const room = rooms.get(ws.roomId);
 
@@ -143,6 +174,7 @@ wss.on('connection', (ws) => {
           lastTime: 0
         };
         rooms.set(roomId, r);
+        broadcastPublicRooms();
       }
       
       ws.roomId = roomId;
@@ -198,8 +230,8 @@ wss.on('connection', (ws) => {
           p.isMoving = false;
         });
 
-        // Always add a bot when botMode, or when solo player
-        if (room.botMode || room.players.size < 2) {
+        // Only add a bot when botMode is explicitly requested
+        if (room.botMode) {
           const botId = 'bot_' + generateId();
           room.players.set(botId, {
             id: botId,
@@ -229,6 +261,8 @@ wss.on('connection', (ws) => {
 
         room.lastTime = Date.now();
         room.tickInterval = setInterval(() => gameTick(room), 33);
+        
+        broadcastPublicRooms();
       }
     } else if (data.type === 'update_settings' && room) {
       if (room.hostId === ws.id && room.state === 'lobby') {
@@ -339,6 +373,7 @@ wss.on('connection', (ws) => {
         if (room.players.size === 0 || Array.from(room.players.values()).filter(pl => pl.ws).length === 0) {
           clearInterval(room.tickInterval);
           rooms.delete(ws.roomId);
+          broadcastPublicRooms();
         } else {
           if (room.hostId === ws.id) {
             if (room.state === 'ended') {
@@ -356,6 +391,10 @@ wss.on('connection', (ws) => {
           }
         }
       }
+    }
+    
+    if (watchers.has(ws)) {
+      watchers.delete(ws);
     }
   });
 });
