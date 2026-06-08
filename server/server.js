@@ -266,7 +266,12 @@ wss.on('connection', (ws) => {
         broadcast(room, { type: 'game_start', startTime: Date.now(), duration: room.timer });
 
         room.lastTime = Date.now();
-        room.tickInterval = setInterval(() => gameTick(room), 33);
+        setTimeout(() => {
+          room.lastTime = Date.now();
+          room.tickInterval = setInterval(() => {
+            gameTick(room);
+          }, 33);
+        }, 3000);
         
         broadcastPublicRooms();
       }
