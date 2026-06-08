@@ -33,7 +33,7 @@ Play here: https://dorm-dash-game.onrender.com
 
 ![Join Screen](./docs/images/join_screen.png)
 
-### Multipalyer Lobby
+### Multiplayer Lobby
 - Once in the lobby, you'll see a preview of the arena and all the connected players.
 - You can copy the room link and share it with your friends to invite them.
 - If you are the Host (the first person to create the room), you can start the game once everyone is ready!
