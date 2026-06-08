@@ -613,6 +613,18 @@ class GameApp {
         break;
 
       case 'game_start':
+        this.state.entities = [];
+        if (this.activeNodes) {
+          this.activeNodes.forEach(node => this.returnNode(node));
+          this.activeNodes.clear();
+        }
+        if (this.els.hudScoreboard) {
+          this.els.hudScoreboard.innerHTML = '';
+        }
+        if (this.els.hudTimer) {
+          this.els.hudTimer.textContent = '00:00';
+          this.els.hudTimer.classList.remove('pulse');
+        }
         this.playSound('start');
         this.state.gameState = 'paused'; 
         this.showScreen('game');
