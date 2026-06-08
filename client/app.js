@@ -410,6 +410,12 @@ class GameApp {
       this.els.btnPlayAgain.style.display = 'none';
       setTimeout(() => this.els.btnPlayAgain.style.display = '', 50);
       
+      if (this.state.roomId && this.state.roomId.startsWith('BOT')) {
+        if (this.ws) this.ws.disconnect();
+        this.showScreen('singleplayer');
+        return;
+      }
+
       if (this.state.isHost) {
         this.ws.send({ type: 'play_again' });
       } else {
@@ -418,7 +424,7 @@ class GameApp {
         document.getElementById('wait-host-msg').classList.remove('hidden');
       }
     });
-
+    
     this.els.btnHome.addEventListener('click', () => {
       if (this.ws) this.ws.disconnect();
       this.showScreen('join');
