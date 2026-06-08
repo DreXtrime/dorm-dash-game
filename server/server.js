@@ -483,6 +483,10 @@ function checkAABB(x1, y1, w1, h1, x2, y2, w2, h2) {
 }
 
 function gameTick(room) {
+  if (room.state !== 'playing') {
+    room.lastTime = Date.now();
+    return;
+  }
   const now = Date.now();
   const dt = Math.min((now - room.lastTime) / 1000, 0.1);
   room.lastTime = now;
