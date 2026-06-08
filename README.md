@@ -10,7 +10,7 @@ Players join a room, select a colored avatar, and enter a forest camp compound w
 ---
 
 ## 🌐 Play Now  
-For your convenience you can access a online ready to play version of the game!
+For your convenience you can access a online ready to play version of the game!  
 Play here: https://web-hosting-multiplayer.onrender.com/
 
 ## 🎮 How to Play
