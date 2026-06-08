@@ -85,6 +85,8 @@ class GameApp {
       this.els.arena.appendChild(node);
       this.domPool.push(node);
     }
+    this.resizeArena();
+    window.addEventListener('resize', () => this.resizeArena());
   }
 
   setupEventListeners() {
@@ -383,6 +385,58 @@ class GameApp {
     }
   }
 
+  startCountdown(callback) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 55; pointer-events: none;
+    `;
+    document.getElementById('screen-game').appendChild(overlay);
+  
+    let count = 3;
+    const tick = () => {
+      overlay.innerHTML = `
+        <div style="
+          font-family: 'Fredoka One', cursive;
+          font-size: 12rem;
+          color: white;
+          text-shadow: 0 0 40px rgba(255,200,0,0.8), 4px 4px 0 #5D2E0C;
+          animation: winner-bounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        ">${count > 0 ? count : 'GO!'}</div>
+      `;
+      if (count === 0) {
+        setTimeout(() => {
+          overlay.remove();
+          callback();
+        }, 600);
+      } else {
+        count--;
+        setTimeout(tick, 900);
+      }
+    };
+    tick();
+  }
+
+  spawnFloatingText(x, y, text, color = '#FFD700') {
+    const el = document.createElement('div');
+    el.textContent = text;
+    el.style.cssText = `
+      position: absolute;
+      left: ${x}px;
+      top: ${y}px;
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.4rem;
+      color: ${color};
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+      pointer-events: none;
+      z-index: 100;
+      animation: float-up 0.8s ease-out forwards;
+    `;
+    this.els.arena.appendChild(el);
+    setTimeout(() => el.remove(), 800);
+  }
+
   showBanner(text, type='error') {
     // TOAST NOTIFICATION: Creates a new element dynamically, animates it in, and removes it after 4s
     const container = document.getElementById('toast-container');
@@ -419,7 +473,6 @@ class GameApp {
   onMessage(dataStr) {
     const data = JSON.parse(dataStr);
     switch (data.type) {
-      case 'error':
       case 'join_error':
         this.showBanner(data.message, 'error');
         if (this.ws) { this.ws.disconnect(); this.ws = null; }
@@ -484,12 +537,15 @@ class GameApp {
 
       case 'game_start':
         this.playSound('start');
-        this.state.gameState = 'playing';
+        this.state.gameState = 'paused'; 
         this.showScreen('game');
-        this.startInputLoop();
         this.lastTime = performance.now();
-        this.rafId = requestAnimationFrame((t) => this.gameLoop(t));
-        break;
+        this.rafId = requestAnimationFrame((t) => this.gameLoop(t));  
+        this.startCountdown(() => {
+        this.state.gameState = 'playing';
+        this.startInputLoop();  
+      });
+      break;
 
       case 'state_delta':
         const oldPlayers = new Map(this.state.players.map(p => [p.id, p]));
@@ -501,8 +557,14 @@ class GameApp {
             if (!Number.isNaN(oldP.displayX)) newP.displayX = oldP.displayX;
             if (!Number.isNaN(oldP.displayY)) newP.displayY = oldP.displayY;
             if (newP.id === this.state.localPlayerId) {
-              if (newP.score > oldP.score) this.playSound('pickup');
-              if (newP.score < oldP.score) this.playSound('cloud_hit');
+              if (newP.score > oldP.score) {
+                this.playSound('pickup');
+                this.spawnFloatingText(newP.displayX, newP.displayY, `+${newP.score - oldP.score}`);
+              }
+              if (newP.score < oldP.score) {
+                this.playSound('cloud_hit');
+                this.spawnFloatingText(newP.displayX, newP.displayY, `-5`, '#FF5252');
+              }
             }
           }
           if (newP.displayX === undefined) newP.displayX = newP.x;
@@ -666,6 +728,14 @@ class GameApp {
     this.domPool.push(node);
   }
 
+  resizeArena() {
+    const scaleX = window.innerWidth / 1200;
+    const scaleY = window.innerHeight / 700;
+    const scale = Math.min(scaleX, scaleY);
+    const wrapper = document.querySelector('.arena-wrapper');
+    if (wrapper) wrapper.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  }
+
   buildCamperDOM(node, color, name) {
     const hex = this.playerColors[color] || this.playerColors.green;
     const dkHex = this.getDarkColor(color);
@@ -728,7 +798,7 @@ class GameApp {
        this.rafId = requestAnimationFrame((t) => this.gameLoop(t));
        return;
     }
-    
+
     const renderList = [];
 
     this.state.players.forEach(p => {
@@ -790,14 +860,15 @@ class GameApp {
         this.activeNodes.set(item.id, node);
       }
 
-      const camperInner = node.querySelector('.camper');
-      if (item.type === 'camper' && camperInner) {
-         camperInner.classList.toggle('walking', item.isMoving);
-         if (item.dx && item.dx < 0) {
-           camperInner.classList.add('facing-left');
-         } else if (item.dx && item.dx > 0) {
-           camperInner.classList.remove('facing-left');
-         }
+      if (item.type === 'camper') {
+        const camperInner = node.querySelector('.camper');
+        if (camperInner) {
+          camperInner.classList.toggle('walking', item.isMoving);
+          if (item.dx < 0) camperInner.dataset.facing = 'left';
+          else if (item.dx > 0) camperInner.dataset.facing = 'right';
+          const facingLeft = camperInner.dataset.facing === 'left';
+          camperInner.style.transform = facingLeft ? 'scaleX(-1)' : '';
+        }
       }
       node.style.transform = `translate3d(${item.x}px, ${item.y}px, 0)`;
     });
