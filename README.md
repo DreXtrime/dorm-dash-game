@@ -21,8 +21,8 @@ Players join a room, select a colored avatar, and enter a forest camp compound w
 ---
 
 ## 🌐 Play Now  
-**Automatically deployed version of the game is also available!**
-Play here: https://dorm-dash-game.onrender.com
+### Automatically deployed version of the game is also available!  
+Play here: https://dorm-dash.tanelneitov.eu/
 
 ## 🎮 How to Play
 
