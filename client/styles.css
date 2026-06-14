@@ -431,7 +431,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 /* ═══════════════════════════════════════
    PART A — CHARACTER DESIGN
 ═══════════════════════════════════════ */
-.camper { position: relative; width: 56px; height: 88px; margin-top: -66px; }
+.camper { position: relative; width: 56px; height: 88px; margin-top: -66px; margin-left: -14px; }
 
 .shadow { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); width: 36px; height: 8px; background: rgba(0,0,0,0.25); border-radius: 50%; z-index: 1; }
 
