@@ -27,6 +27,7 @@ class GameApp {
       btnQuit: document.getElementById('btn-quit'),
       btnToggleSoundJoin: document.getElementById('btn-toggle-sound-join'),
       btnToggleSoundGame: document.getElementById('btn-toggle-sound-game'),
+      btnToggleSoundLobby: document.getElementById('btn-toggle-sound-lobby'),
       btnPlayAgain: document.getElementById('btn-play-again'),
       btnHome: document.getElementById('btn-home'),
       lobbyPlayers: document.getElementById('lobby-players'),
@@ -359,6 +360,7 @@ class GameApp {
     };
     this.els.btnToggleSoundJoin.addEventListener('click', toggleSound);
     this.els.btnToggleSoundGame.addEventListener('click', toggleSound);
+    this.els.btnToggleSoundLobby.addEventListener('click', toggleSound);
 
     this.els.btnMenu.addEventListener('click', () => this.ws.sendMenuAction('pause'));
     this.els.btnResume.addEventListener('click', () => {
@@ -434,6 +436,12 @@ class GameApp {
   updateSoundIcon() {
     document.querySelectorAll('.sound-icon-text').forEach(el => {
       el.textContent = this.soundEnabled ? '🔊' : '🔇';
+    });
+    document.querySelectorAll('.icon-snd-on').forEach(el => {
+      el.classList.toggle('hidden', !this.soundEnabled);
+    });
+    document.querySelectorAll('.icon-snd-off').forEach(el => {
+      el.classList.toggle('hidden', this.soundEnabled);
     });
   }
 

@@ -59,7 +59,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 .jbg-grass-fore { position: absolute; bottom: 0; left: 0; width: 100%; height: 18%; background: linear-gradient(180deg, #388E3C 0%, #1B5E20 100%); z-index: 3; border-top: 2px solid rgba(255,255,255,0.1); box-shadow: 0 -10px 20px rgba(0,0,0,0.15); }
 
 .join-col { display: flex; flex-direction: column; }
-@media (min-width: 2560px) {
+@media (min-width: 2560px) and (min-height: 1441px) {
   .toast-container { zoom: 2.5; }
   /* Join screen */
   .join-card { zoom: 2.0; }
@@ -73,6 +73,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
   .lobby-logo .logo-block { zoom: 2; }
   .invite-bar { zoom: 1.5; top: 66px; }
   .lobby-body { top: 120px; }
+  #screen-lobby .sound-pill { zoom: 2; }
+  #screen-join .sound-pill { zoom: 2; }
   .jbg-trees .jt { transform: scale(2.0); }
   .jbg-trees { height: 240px; }
 
@@ -104,6 +106,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
   .lobby-logo .logo-block { zoom: 3; }
   .invite-bar { zoom: 2; top: 88px; }
   .lobby-body { top: 160px; }
+  #screen-lobby .sound-pill { zoom: 3; }
+  #screen-join .sound-pill { zoom: 3; }
 
   /* Ingame HUD */
   .hud-top { zoom: 2; }
@@ -206,6 +210,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 ═══════════════════════════════════════ */
 .sound-pill { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; display: flex; align-items: center; gap: 8px; z-index: 20; color: white; transition: background 0.2s; }
 .sound-pill:hover { background: rgba(0,0,0,0.6); }
+
 .sound-icon-text { display: flex; align-items: center; }
 .sound-label { font-size: 0.85rem; font-weight: 700; white-space: nowrap; opacity: 0.9; }
 
@@ -252,6 +257,24 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
   justify-content: center;
   gap: 10px;
   z-index: 10;
+  padding-bottom: 20px;
+}
+
+#screen-join .sound-pill {
+  position: relative;
+  transform: none;
+  left: auto;
+  bottom: auto;
+  margin-top: 16px;
+  justify-content: center;
+}
+
+#screen-lobby .sound-pill {
+  position: relative;
+  transform: none;
+  left: auto;
+  bottom: auto;
+  margin-top: 10px;
 }
 .lobby-logo {
   position: absolute;
