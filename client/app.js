@@ -591,10 +591,12 @@ class GameApp {
           document.getElementById('lobby-host-settings').classList.remove('hidden');
           document.getElementById('btn-start-game').classList.remove('disabled');
           document.getElementById('lobby-waiting-msg').classList.add('hidden');
+          document.getElementById('lobby-waiting-msg-host').classList.remove('hidden');
         } else {
           document.getElementById('lobby-host-settings').classList.add('hidden');
           document.getElementById('btn-start-game').classList.add('disabled');
           document.getElementById('lobby-waiting-msg').classList.remove('hidden');
+          document.getElementById('lobby-waiting-msg-host').classList.add('hidden');
         }
 
         this.els.lobbyRoomCode.textContent = this.state.roomId;

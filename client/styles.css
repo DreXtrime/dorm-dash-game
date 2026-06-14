@@ -58,10 +58,72 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 .jbg-grass-mid { position: absolute; top: 45%; left: 0; width: 100%; height: 55%; background: linear-gradient(180deg, #52A638 0%, #388E3C 30%, #2E7D32 100%); z-index: 2; box-shadow: inset 0 20px 30px rgba(110,193,86,0.3); }
 .jbg-grass-fore { position: absolute; bottom: 0; left: 0; width: 100%; height: 18%; background: linear-gradient(180deg, #388E3C 0%, #1B5E20 100%); z-index: 3; border-top: 2px solid rgba(255,255,255,0.1); box-shadow: 0 -10px 20px rgba(0,0,0,0.15); }
 
+.join-col { display: flex; flex-direction: column; }
+@media (min-width: 2560px) {
+  .toast-container { zoom: 2.5; }
+  /* Join screen */
+  .join-card { zoom: 2.0; }
+  .jbg-trees .jt { transform: scale(2.0); }
+  .jbg-trees { height: 240px; }
+  #screen-join .logo-block { zoom: 2; }
+
+  /* Lobby screen */
+  .lobby-card { zoom: 2.0; }
+  .lobby-body .logo-block { zoom: 2; }
+  .lobby-logo .logo-block { zoom: 2; }
+  .invite-bar { zoom: 1.5; top: 66px; }
+  .lobby-body { top: 120px; }
+  .jbg-trees .jt { transform: scale(2.0); }
+  .jbg-trees { height: 240px; }
+
+  /* Ingame HUD */
+  .hud-top { zoom: 1.5; }
+  .hud-timer { zoom: 1.5; }
+  .player-label { zoom: 1.5; }
+  .score-row { zoom: 1.5; }
+  .hud-slot { zoom: 1.5; }
+  .hud-menu-btn { zoom: 1.5; }
+  .mobile-dpad { zoom: 1.5; }
+
+  .pause-card { zoom: 1.5; }
+
+  /* End screen */
+  .end-card { zoom: 1.5; }
+}
+
+@media (min-width: 3840px) {
+  /* Join screen */
+  .join-card { zoom: 2; }
+  .jbg-trees .jt { transform: scale(2); }
+  .jbg-trees { height: 320px; }
+  #screen-join .logo-block { zoom: 3; }
+
+  /* Lobby screen */
+  .lobby-card { zoom: 3; }
+  .lobby-body .logo-block { zoom: 3; }
+  .lobby-logo .logo-block { zoom: 3; }
+  .invite-bar { zoom: 2; top: 88px; }
+  .lobby-body { top: 160px; }
+
+  /* Ingame HUD */
+  .hud-top { zoom: 2; }
+  .hud-timer { zoom: 2; }
+  .player-label { zoom: 2; }
+  .score-row { zoom: 2; }
+  .hud-slot { zoom: 2; }
+  .hud-menu-btn { zoom: 2; }
+  .mobile-dpad { zoom: 2; }
+
+  .pause-card { zoom: 2; }
+
+  /* End screen */
+  .end-card { zoom: 2; }
+}
+
 /* ═══════════════════════════════════════
    CAMPFIRE LOGO
 ═══════════════════════════════════════ */
-.logo-block { position: relative; z-index: 10; text-align: center; margin-bottom: 30px; animation: float-logo 4s ease-in-out infinite; }
+.logo-block { position: relative; z-index: 11; text-align: center; margin-bottom: 30px; animation: float-logo 4s ease-in-out infinite; }
 @keyframes float-logo { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 .campfire { position: relative; width: 100px; height: 100px; margin: 0 auto; filter: drop-shadow(0 15px 15px rgba(0,0,0,0.3)); }
 .cf-base { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); width: 70px; height: 20px; background: radial-gradient(ellipse, #444 0%, #222 100%); border-radius: 50%; z-index: 1; box-shadow: inset 0 -3px 5px rgba(0,0,0,0.8), 0 5px 10px rgba(0,0,0,0.5); }
@@ -94,8 +156,6 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
   .join-grid { grid-template-columns: 1fr 1fr; gap: 36px; }
   .right-col { border-left: 2px dashed rgba(139,94,60,0.3); padding-left: 36px; }
 }
-.join-col { display: flex; flex-direction: column; }
-
 @keyframes card-pop { 0% { transform: scale(0.8) translateY(20px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
 
 .card-header-bar { background: linear-gradient(180deg, #9E6B45 0%, #7A4E2F 100%); margin: -36px -36px 24px -36px; border-radius: 23px 23px 0 0; color: #FFF8DC; font: 'Fredoka One', cursive; font-size: 1.2rem; padding: 16px 20px; text-align: center; box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 4px 8px rgba(0,0,0,0.15); text-shadow: 0 2px 2px rgba(0,0,0,0.3); border-bottom: 2px solid #5C3A21; }
@@ -152,14 +212,60 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 /* ═══════════════════════════════════════
    LOBBY SCREEN
 ═══════════════════════════════════════ */
-.lobby-topbar { position: absolute; top: 0; left: 0; width: 100%; height: 44px; background: rgba(60, 35, 10, 0.92); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; z-index: 20; }
-.lobby-code-label { color: #FFF8DC; font-weight: 700; }
-.code-mono { font-family: monospace; font-size: 1.2rem; letter-spacing: 1px; background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 4px; }
+.lobby-code-label {
+  display: flex;
+  align-items: center;
+  background: #3d2d1c;
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #FFF8DC;
+  gap: 7px;
+  font-weight: 700;
+}
+.lobby-room-code {
+  padding: 20px 20px;
+}
+
+#btn-copy-link {
+  flex: 1;
+}
+.lobby-code-row {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 12px;
+}
+.code-mono { font-family: monospace; color: #FFF8DC; font-size: 2.0rem; letter-spacing: 1px; background: #73502a; padding: 2px 8px; border-radius: 4px; }
 .invite-bar { position: absolute; top: 44px; left: 0; width: 100%; height: 36px; background: rgba(30, 100, 60, 0.85); color: white; display: flex; justify-content: center; align-items: center; gap: 12px; font-weight: 700; font-size: 0.9rem; z-index: 20; }
 .invite-close { background: none; border: none; color: white; cursor: pointer; opacity: 0.7; position: absolute; right: 20px; }
 .invite-close:hover { opacity: 1; }
 
-.lobby-body { position: absolute; top: 80px; left: 0; width: 100%; height: calc(100% - 80px); display: flex; align-items: center; justify-content: center; z-index: 10; }
+.lobby-body {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  z-index: 10;
+}
+.lobby-logo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  z-index: 10;
+}
 .lobby-card { max-width: 440px; width: 90vw; padding: 20px; }
 
 .lobby-preview { position: relative; height: 180px; border-radius: 10px; overflow: hidden; border: 2px solid #5C3A21; margin-bottom: 20px; background: #2E7D32; }
@@ -181,7 +287,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 .setting-select { background: #FFF8DC; border: 2px solid #C4955A; border-radius: 6px; padding: 6px 10px; font: 700 0.95rem 'Nunito', sans-serif; color: #3A1A05; outline: none; }
 
 .lobby-wait-msg { text-align: center; color: #8B5E3C; font-weight: 700; margin-top: 15px; font-size: 0.95rem; }
-
+.lobby-wait-msg-host { text-align: center; color: #8B5E3C; font-weight: 700; margin-top: 15px; font-size: 1.2rem; }
 /* ═══════════════════════════════════════
    GAME ARENA BACKGROUND
 ═══════════════════════════════════════ */
@@ -392,8 +498,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Nunito',
 .pause-title { color: #FFD700; font: 'Fredoka One', cursive; font-size: 2.2rem; margin-bottom: 24px; text-shadow: 0 4px 0 #A85A4A, 0 6px 10px rgba(0,0,0,0.3); letter-spacing: 1px; }
 
 /* Toast system */
-.toast-container { position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 9999; }
-.toast { background: rgba(20, 20, 20, 0.9); color: white; font: 700 1rem 'Nunito', sans-serif; padding: 12px 20px; border-radius: 8px; border-left: 5px solid #FF5252; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: toast-slide 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.toast-container { position: absolute; top: 50px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 9999; }
+.toast { background: rgba(20, 20, 20, 0.9); color: white; font: 700 1rem 'Nunito', sans-serif; font-size: 1.7rem; padding: 16px 26px; border-radius: 8px; border-left: 5px solid #FF5252; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: toast-slide 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .toast.info { border-left-color: #4CAF50; }
 @keyframes toast-slide { 0% { transform: translateX(120%); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
 @keyframes toast-fade { 0% { opacity: 1; } 100% { opacity: 0; } }

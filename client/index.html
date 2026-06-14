@@ -66,7 +66,7 @@
     <div class="card join-card">
       <div class="card-header-bar">Dorm Dash Setup</div>
       <div class="card-body join-grid">
-        
+
         <!-- Left Column -->
         <div class="join-col">
           <label class="field-label">Player Name</label>
@@ -120,7 +120,7 @@
             <input type="text" id="input-room" class="field field-mono" placeholder="CODE" maxlength="4" style="text-transform: uppercase; flex: 1; margin-bottom: 0;">
             <button id="btn-join-room" class="btn btn-green" style="padding: 10px;">Join</button>
           </div>
-          
+
           <div style="text-align: center; margin: 15px 0; color: rgba(0,0,0,0.3); font-size: 14px; font-weight: bold;">- OR -</div>
 
           <button id="btn-create-room" class="btn btn-orange btn-block" style="margin-top: 0;">Create Room</button>
@@ -170,11 +170,11 @@
     </div>
     <div class="jbg-grass-mid"></div>
     <div class="jbg-grass-fore"></div>
-  
+
     <div class="card join-card" style="max-width: 540px; margin-top: 40px;">
       <div class="card-header-bar">Single Player Setup</div>
       <div class="card-body" style="padding: 20px;">
-  
+
         <!-- Bot count -->
         <div class="setting-row" style="margin-bottom: 18px;">
           <label class="field-label">Number of Opponents</label>
@@ -184,10 +184,10 @@
             <button class="btn bot-count-btn" data-count="3">3 Bots</button>
           </div>
         </div>
-  
+
         <!-- Bot config cards, shown/hidden based on count -->
         <div id="bot-configs" style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px;">
-  
+
           <div class="bot-config-card" id="bot-card-0">
             <div class="bot-card-header">
               <span class="bot-card-title">Bot 1</span>
@@ -220,7 +220,7 @@
               </div>
             </div>
           </div>
-  
+
           <div class="bot-config-card hidden" id="bot-card-1">
             <div class="bot-card-header">
               <span class="bot-card-title">Bot 2</span>
@@ -253,7 +253,7 @@
               </div>
             </div>
           </div>
-  
+
           <div class="bot-config-card hidden" id="bot-card-2">
             <div class="bot-card-header">
               <span class="bot-card-title">Bot 3</span>
@@ -286,9 +286,9 @@
               </div>
             </div>
           </div>
-  
+
         </div>
-  
+
         <!-- Round timer -->
         <div class="setting-row" style="margin-bottom: 20px;">
           <label class="field-label">Round Timer</label>
@@ -299,7 +299,7 @@
             <option value="300">5 Minutes</option>
           </select>
         </div>
-  
+
         <button id="btn-start-singleplayer" class="btn btn-orange btn-block btn-lg">START GAME</button>
         <button id="btn-back-to-join" class="btn btn-outline btn-block" style="margin-top: 10px;">Back</button>
       </div>
@@ -317,6 +317,13 @@
         <div class="jbg-cloud c3"></div>
         <div class="jbg-cloud c4"></div>
     </div>
+
+    <div class="jbg-hills">
+      <div class="jbg-hill h1"></div>
+      <div class="jbg-hill h2"></div>
+      <div class="jbg-hill h3"></div>
+    </div>
+
     <div class="jbg-trees">
       <div class="jt jt-a"></div><div class="jt jt-b"></div><div class="jt jt-a"></div>
       <div class="jt jt-c"></div><div class="jt jt-b"></div><div class="jt jt-a"></div>
@@ -326,12 +333,10 @@
     <div class="jbg-grass-mid"></div>
     <div class="jbg-grass-fore"></div>
 
-    <div class="lobby-topbar">
-      <span class="lobby-code-label">Room Code: <span id="lobby-room-code" class="code-mono">----</span></span>
-      <button id="btn-copy-link" class="btn btn-orange btn-sm">Copy Code</button>
-    </div>
-
-    <div class="lobby-body">
+    <div class="lobby-logo">
+      <div class="logo-block">
+        <h1 class="game-title">DORM DASH</h1>
+      </div>
       <div class="card lobby-card">
         <!-- Arena mini-preview -->
         <div class="lobby-preview">
@@ -361,7 +366,7 @@
               <button class="l-color-btn" data-color="yellow" style="background: #FFC107;"></button>
             </div>
           </div>
-          
+
           <div id="lobby-host-settings" class="hidden">
             <div class="setting-row">
               <label>Round Timer</label>
@@ -385,6 +390,14 @@
         <button id="btn-start-game" class="btn btn-orange btn-block btn-lg disabled">START GAME</button>
         <button id="btn-leave-lobby" class="btn btn-outline btn-block" style="margin-top: 10px;">Leave Room</button>
         <div id="lobby-waiting-msg" class="lobby-wait-msg hidden">Waiting for host to start…</div>
+        <div id="lobby-waiting-msg-host" class="lobby-wait-msg-host hidden">
+            You're the host! Share your room code, <br>
+            wait for others and start the game when everyone's ready.
+        </div>
+        <div class="lobby-code-row">
+          <span class="lobby-code-label">Room Code: <span id="lobby-room-code" class="code-mono">----</span></span>
+          <button id="btn-copy-link" class="btn btn-orange btn-sm">Copy Code</button>
+        </div>
       </div>
     </div>
   </div>
@@ -519,11 +532,24 @@
        SCREEN 4 — END
   ═══════════════════════════════════════ -->
   <div id="screen-end" class="screen scrollable hidden">
-    <div class="jbg-sky"></div>
+    <div class="jbg-sky">
+      <div class="jbg-cloud c1"></div>
+      <div class="jbg-cloud c2"></div>
+      <div class="jbg-cloud c3"></div>
+      <div class="jbg-cloud c4"></div>
+    </div>
+
+    <div class="jbg-hills">
+      <div class="jbg-hill h1"></div>
+      <div class="jbg-hill h2"></div>
+      <div class="jbg-hill h3"></div>
+    </div>
+
     <div class="jbg-trees">
       <div class="jt jt-a"></div><div class="jt jt-b"></div><div class="jt jt-a"></div>
       <div class="jt jt-c"></div><div class="jt jt-b"></div><div class="jt jt-a"></div>
       <div class="jt jt-c"></div><div class="jt jt-b"></div><div class="jt jt-a"></div>
+      <div class="jt jt-b"></div><div class="jt jt-c"></div><div class="jt jt-a"></div>
     </div>
     <div class="jbg-grass-mid"></div>
     <div class="jbg-grass-fore"></div>
